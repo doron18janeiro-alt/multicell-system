@@ -148,6 +148,75 @@ label {
 }
 
 .despesa-detalhes-container {
+  padding: 30px;
+  color: #fff;
+  max-width: 900px;
+  margin: auto;
+}
+
+.despesa-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.btn-voltar {
+  background: #2c2c2c;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  color: #eee;
+  cursor: pointer;
+}
+
+.titulo-despesa {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.card-bloco {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 22px;
+  border-radius: 14px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card-titulo {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.linha-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.parcela-item,
+.pg-item {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.btn-pagamento {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(90deg, #f0c040, #ffdd66);
+  border: none;
+  border-radius: 10px;
+  color: #222;
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.despesa-detalhes-container {
   padding: 2rem;
   color: var(--white-soft, #f8f9ff);
 }

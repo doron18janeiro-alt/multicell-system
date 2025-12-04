@@ -1,157 +1,134 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
-import { FileUploader } from "../../components/files/FileUploader";
-import { FileGallery } from "../../components/files/FileGallery";
 import "./despesas.css";
 
 export default function DetalhesDespesa() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [despesa, setDespesa] = useState(null);
-  const [pagamentos, setPagamentos] = useState([]);
-  const [parcelas, setParcelas] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    carregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  async function carregar() {
-    setLoading(true);
-
-    const { data: d } = await supabase
+  async function carregarDespesa() {
+    const { data, error } = await supabase
       .from("despesas")
       .select("*")
       .eq("id", id)
       .single();
 
-    const { data: pags } = await supabase
-      .from("despesas_pagamentos")
-      .select("*")
-      .eq("despesa_id", id)
-      .order("data_pagamento", { ascending: false });
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-    const { data: parcs } = await supabase
-      .from("despesas_parcelas")
-      .select("*")
-      .eq("despesa_id", id)
-      .order("numero", { ascending: true });
-
-    setDespesa(d || null);
-    setPagamentos(pags || []);
-    setParcelas(parcs || []);
+    setDespesa(data);
     setLoading(false);
   }
 
-  if (loading || !despesa) {
+  useEffect(() => {
+    carregarDespesa();
+  }, []);
+
+  if (loading) {
     return (
-      <div className="despesas-container">
-        <div className="despesas-card">
-          <p>Carregando…</p>
-        </div>
+      <div className="page-center">
+        <h2 className="text-light">Carregando...</h2>
       </div>
     );
   }
 
-  const formatCurrency = (value) =>
-    Number(value || 0).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-    });
-
-  const formatDate = (iso) =>
-    iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
-
-  const totalPago = pagamentos.reduce(
-    (sum, item) => sum + Number(item.valor || 0),
-    0
-  );
-  const saldo = Number(despesa.valor_total || 0) - totalPago;
+  if (!despesa) {
+    return (
+      <div className="page-center">
+        <h2 className="text-light">Despesa não encontrada.</h2>
+      </div>
+    );
+  }
 
   return (
     <div className="despesa-detalhes-container">
-      <div className="top-actions">
-        <button className="btn-back" onClick={() => navigate("/despesas")}>
+      {/* CABEÇALHO */}
+      <div className="despesa-header">
+        <button className="btn-voltar" onClick={() => navigate("/despesas")}>
           Voltar
         </button>
-        <button
-          className="btn-primary"
-          onClick={() => navigate(`/despesas/${id}/pagar`)}
-        >
-          Registrar pagamento
-        </button>
+        <h1 className="titulo-despesa">Detalhes da Despesa</h1>
       </div>
 
-      <div className="card resumo-card">
-        <h2 className="card-title">Resumo da Despesa</h2>
-        <div className="grid-2">
-          <div>
-            <p>
-              <strong>Descrição:</strong> {despesa.descricao}
-            </p>
-            <p>
-              <strong>Categoria:</strong> {despesa.categoria || "—"}
-            </p>
-            <p>
-              <strong>Observações:</strong> {despesa.observacoes || "—"}
-            </p>
-          </div>
-          <div>
-            <p>
-              <strong>Valor total:</strong>{" "}
-              {formatCurrency(despesa.valor_total)}
-            </p>
-            <p>
-              <strong>Pago:</strong> {formatCurrency(totalPago)}
-            </p>
-            <p>
-              <strong>Saldo a pagar:</strong> {formatCurrency(saldo)}
-            </p>
-            <p>
-              <strong>Vencimento:</strong> {formatDate(despesa.vencimento)}
-            </p>
-          </div>
+      {/* CARD RESUMO */}
+      <div className="card-bloco">
+        <h2 className="card-titulo">Resumo</h2>
+
+        <div className="linha-info">
+          <span>Descrição:</span>
+          <p>{despesa.descricao}</p>
+        </div>
+
+        <div className="linha-info">
+          <span>Categoria:</span>
+          <p>{despesa.categoria}</p>
+        </div>
+
+        <div className="linha-info">
+          <span>Valor total:</span>
+          <p>R$ {despesa.valor_total}</p>
+        </div>
+
+        <div className="linha-info">
+          <span>Pago:</span>
+          <p className="valor-pago">R$ {despesa.valor_pago}</p>
+        </div>
+
+        <div className="linha-info">
+          <span>Vencimento:</span>
+          <p>{despesa.vencimento}</p>
+        </div>
+
+        <div className="linha-info">
+          <span>Observações:</span>
+          <p>{despesa.obs || "Sem observações"}</p>
         </div>
       </div>
 
-      <div className="card">
-        <h2 className="card-title">Parcelas</h2>
-        {parcelas.length === 0 ? (
-          <p className="muted">Nenhuma parcela registrada.</p>
-        ) : (
-          parcelas.map((parcela, index) => (
-            <div key={parcela.id || index} className="list-row">
-              <span>📌 Parcela {parcela.numero || index + 1}</span>
-              <span>{formatCurrency(parcela.valor)}</span>
-              <span>Vencimento: {formatDate(parcela.vencimento)}</span>
+      {/* CARD PARCELAS */}
+      {despesa.parcelas?.length > 0 && (
+        <div className="card-bloco">
+          <h2 className="card-titulo">Parcelas</h2>
+
+          {despesa.parcelas.map((parcela, index) => (
+            <div key={index} className="parcela-item">
+              <strong>{index + 1}ª parcela</strong>
+              <p>Valor: R$ {parcela.valor}</p>
+              <p>Vencimento: {parcela.vencimento}</p>
             </div>
-          ))
+          ))}
+        </div>
+      )}
+
+      {/* CARD PAGAMENTOS */}
+      <div className="card-bloco">
+        <h2 className="card-titulo">Pagamentos</h2>
+
+        {despesa.pagamentos?.length === 0 && (
+          <p className="texto-vazio">Nenhum pagamento registrado.</p>
         )}
+
+        {despesa.pagamentos?.map((pg, index) => (
+          <div key={index} className="pg-item">
+            <strong>R$ {pg.valor}</strong>
+            <p>{pg.data}</p>
+            <p>Forma: {pg.forma}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="card">
-        <h2 className="card-title">Pagamentos</h2>
-        {pagamentos.length === 0 ? (
-          <p className="muted">Nenhum pagamento registrado ainda.</p>
-        ) : (
-          pagamentos.map((pagamento) => (
-            <div key={pagamento.id} className="list-row">
-              <span>💸 {formatCurrency(pagamento.valor)}</span>
-              <span>{pagamento.forma_pagamento || "—"}</span>
-              <span>{formatDate(pagamento.data_pagamento)}</span>
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="card">
-        <h2 className="card-title">Fotos / Documentos</h2>
-        <FileUploader ownerType="despesa" ownerId={id} onUploaded={carregar} />
-        <FileGallery ownerType="despesa" ownerId={id} allowDelete={false} />
-      </div>
+      <button
+        className="btn-pagamento"
+        onClick={() => navigate(`/despesas/pagar/${despesa.id}`)}
+      >
+        Registrar pagamento
+      </button>
     </div>
   );
 }
