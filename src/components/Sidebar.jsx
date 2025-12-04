@@ -1,5 +1,6 @@
-import LogoAnimada from "./LogoAnimada";
 import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../services/supabase";
+import Logo from "../assets/logo.png";
 
 const links = [
   { label: "Dashboard", path: "/dashboard" },
@@ -16,18 +17,19 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
-    localStorage.removeItem("multicell_auth");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     navigate("/login", { replace: true });
   };
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-header">
-        <LogoAnimada size={90} />
-        <div className="logo-text">
-          <div className="logo-title">MULTICELL</div>
-          <div className="logo-sub">Painel Futurista</div>
+      <div className="sidebar-logo-block">
+        <img src={Logo} alt="Logo Multicell" className="sidebar-logo" />
+
+        <div className="sidebar-title-wrapper">
+          <h2 className="sidebar-title">CENTRAL DE COMANDO</h2>
+          <p className="sidebar-subtitle">Operação premium, tempo real</p>
         </div>
       </div>
       <div className="nav-group">

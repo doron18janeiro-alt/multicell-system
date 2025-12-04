@@ -1,22 +1,18 @@
-import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
-import { useNavigate } from "react-router-dom";
-import { clearAuth, getAuthUser } from "../utils/auth";
+import React, { memo } from "react";
+import Sidebar from "../components/Sidebar";
+import Header from "../components/Header";
+import { Outlet } from "react-router-dom";
 
-export default function AppLayout({ children }) {
-  const navigate = useNavigate();
-  const handleLogout = () => {
-    clearAuth();
-    navigate("/login", { replace: true });
-  };
-  const user = getAuthUser();
+const AppLayout = memo(() => {
   return (
-    <div className="app-shell">
+    <div className="main-layout">
       <Sidebar />
-      <main className="main">
-        <Topbar onLogout={handleLogout} usuario={user.nome || "Usuario"} />
-        {children}
-      </main>
+      <div className="main-content">
+        <Header />
+        <Outlet />
+      </div>
     </div>
   );
-}
+});
+
+export default AppLayout;

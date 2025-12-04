@@ -1,13 +1,17 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.jsx";
+import { RouterProvider } from "react-router-dom";
 import SupabaseErrorBoundary from "./components/SupabaseErrorBoundary.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import { router } from "./routes/router.jsx";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <SupabaseErrorBoundary>
-      <App />
-    </SupabaseErrorBoundary>
+    <AuthProvider>
+      <SupabaseErrorBoundary>
+        <RouterProvider router={router} />
+      </SupabaseErrorBoundary>
+    </AuthProvider>
   </React.StrictMode>
 );

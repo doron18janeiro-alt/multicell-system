@@ -1,11 +1,39 @@
+import React, { Suspense, lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import AppLayout from "./layouts/AppLayout";
-import Dashboard from "./pages/Dashboard";
-import Os from "./pages/Os";
-import Caixa from "./pages/Caixa";
-import Estoque from "./pages/Estoque";
-import Relatorios from "./pages/Relatorios";
-import Config from "./pages/Config";
+
+const AppLayout = lazy(() => import("./layouts/AppLayout"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Os = lazy(() => import("./pages/Os"));
+const Caixa = lazy(() => import("./pages/Caixa"));
+const Estoque = lazy(() => import("./pages/Estoque"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const Config = lazy(() => import("./pages/Config"));
+const Login = lazy(() => import("./pages/Login"));
+
+function CinematicFallback() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#050114] text-slate-100">
+      <div className="relative px-10 py-8 rounded-3xl border border-slate-800/60 bg-slate-900/40 backdrop-blur-2xl shadow-[0_30px_80px_rgba(3,7,18,0.9)]">
+        <div
+          className="absolute inset-3 rounded-2xl border border-slate-700/40 animate-pulse"
+          aria-hidden
+        />
+        <div className="relative text-center space-y-3">
+          <p className="text-xs uppercase tracking-[0.5em] text-slate-400">
+            Carregando cockpit
+          </p>
+          <p className="text-lg font-semibold text-white">
+            Preparando módulos avançados…
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const withSuspense = (children) => (
+  <Suspense fallback={<CinematicFallback />}>{children}</Suspense>
+);
 
 const ProtectedRoute = ({ user, children }) => {
   if (!user) {
@@ -17,10 +45,14 @@ const ProtectedRoute = ({ user, children }) => {
 export function createAppRouter({ user, onLogout }) {
   return createBrowserRouter([
     {
+      path: "/login",
+      element: withSuspense(<Login />),
+    },
+    {
       path: "/",
       element: (
         <ProtectedRoute user={user}>
-          <AppLayout user={user} onLogout={onLogout} />
+          {withSuspense(<AppLayout user={user} onLogout={onLogout} />)}
         </ProtectedRoute>
       ),
       children: [
@@ -29,23 +61,21 @@ export function createAppRouter({ user, onLogout }) {
           path: "dashboard",
           element: (
             <ProtectedRoute user={user}>
-              <Dashboard />
+              {withSuspense(<Dashboard />)}
             </ProtectedRoute>
           ),
         },
         {
           path: "os",
           element: (
-            <ProtectedRoute user={user}>
-              <Os />
-            </ProtectedRoute>
+            <ProtectedRoute user={user}>{withSuspense(<Os />)}</ProtectedRoute>
           ),
         },
         {
           path: "caixa",
           element: (
             <ProtectedRoute user={user}>
-              <Caixa />
+              {withSuspense(<Caixa />)}
             </ProtectedRoute>
           ),
         },
@@ -53,7 +83,7 @@ export function createAppRouter({ user, onLogout }) {
           path: "estoque",
           element: (
             <ProtectedRoute user={user}>
-              <Estoque />
+              {withSuspense(<Estoque />)}
             </ProtectedRoute>
           ),
         },
@@ -61,7 +91,7 @@ export function createAppRouter({ user, onLogout }) {
           path: "relatorios",
           element: (
             <ProtectedRoute user={user}>
-              <Relatorios />
+              {withSuspense(<Relatorios />)}
             </ProtectedRoute>
           ),
         },
@@ -69,7 +99,7 @@ export function createAppRouter({ user, onLogout }) {
           path: "config",
           element: (
             <ProtectedRoute user={user}>
-              <Config />
+              {withSuspense(<Config />)}
             </ProtectedRoute>
           ),
         },
