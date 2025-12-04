@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import OsForm from "../components/OsForm";
 import TermoGarantia from "../components/TermoGarantia";
 import FileUploader from "../components/files/FileUploader";
-import { FileGallery } from "../components/files/FileGallery";
+import FileGallery from "../components/files/FileGallery";
 import { printElementById, shareElementOnWhatsApp } from "../utils/print";
 import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
 
@@ -61,6 +61,7 @@ export default function OsPage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [termOs, setTermOs] = useState(null);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   const debouncedSearch = useDebounced(search, 350);
 
@@ -409,10 +410,16 @@ export default function OsPage() {
               </div>
 
               <FileUploader
-                folder={`os/${selected.id}`}
-                onUploaded={(file) => console.log("Foto enviada:", file)}
+                entidade="os"
+                entidadeId={selected.id}
+                onUploaded={() => setGalleryKey((prev) => prev + 1)}
               />
-              <FileGallery ownerType="os" ownerId={selected.id} />
+              <FileGallery
+                key={`${selected.id}-${galleryKey}`}
+                entidade="os"
+                entidadeId={selected.id}
+                allowDelete
+              />
             </div>
           )}
 

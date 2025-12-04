@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabaseClient";
 import FileUploader from "../../components/files/FileUploader";
-import "../../components/files/gallery.css";
+import FileGallery from "../../components/files/FileGallery";
 import "./produto.css";
 
 export default function DetalhesProduto() {
@@ -11,6 +11,7 @@ export default function DetalhesProduto() {
 
   const [produto, setProduto] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   async function carregar() {
     setLoading(true);
@@ -31,23 +32,6 @@ export default function DetalhesProduto() {
   useEffect(() => {
     carregar();
   }, [id]);
-
-  async function addFoto(url) {
-    if (!url || !produto) return;
-    const novasFotos = [...(produto.fotos || []), url];
-    const { error } = await supabase
-      .from("produtos")
-      .update({ fotos: novasFotos })
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("Erro ao salvar fotos");
-      return;
-    }
-
-    setProduto((prev) => ({ ...prev, fotos: novasFotos }));
-  }
 
   if (loading) {
     return (
@@ -98,23 +82,16 @@ export default function DetalhesProduto() {
       <div className="card-bloco produto-galeria">
         <h2>Fotos do produto</h2>
         <FileUploader
-          folder={`produtos/${id}`}
-          onUploaded={(file) => addFoto(file.url)}
+          entidade="produto"
+          entidadeId={produto.id}
+          onUploaded={() => setGalleryKey((prev) => prev + 1)}
         />
-        {produto.fotos?.length ? (
-          <div className="galeria-fotos">
-            {produto.fotos.map((foto, index) => (
-              <img
-                key={`${foto}-${index}`}
-                src={foto}
-                alt="foto"
-                className="foto-thumb"
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
-        )}
+        <FileGallery
+          key={galleryKey}
+          entidade="produto"
+          entidadeId={produto.id}
+          allowDelete
+        />
       </div>
     </div>
   );

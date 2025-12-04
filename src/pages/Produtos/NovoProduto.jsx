@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { supabase } from "../../services/supabaseClient";
-import FileUploader from "../../components/files/FileUploader";
-import "../../components/files/gallery.css";
 import "./produto.css";
 
 export default function NovoProduto({ onClose, onCreated }) {
@@ -14,29 +12,10 @@ export default function NovoProduto({ onClose, onCreated }) {
     preco_custo: "",
     preco_venda: "",
     obs: "",
-    fotos: [],
   });
 
   const atualizarCampo = (campo, valor) => {
     setForm((prev) => ({ ...prev, [campo]: valor }));
-  };
-
-  const handleFotosUpload = (arquivos) => {
-    const itens = Array.isArray(arquivos) ? arquivos : [arquivos];
-    const urls = itens
-      .map((item) => (typeof item === "string" ? item : item?.url))
-      .filter(Boolean);
-
-    if (!urls.length) return;
-
-    setForm((prev) => ({ ...prev, fotos: [...prev.fotos, ...urls] }));
-  };
-
-  const removerFoto = (url) => {
-    setForm((prev) => ({
-      ...prev,
-      fotos: prev.fotos.filter((foto) => foto !== url),
-    }));
   };
 
   async function salvar() {
@@ -56,7 +35,6 @@ export default function NovoProduto({ onClose, onCreated }) {
         preco_custo: Number(form.preco_custo),
         preco_venda: Number(form.preco_venda),
         obs: form.obs,
-        fotos: form.fotos,
       })
       .select()
       .single();
@@ -122,32 +100,19 @@ export default function NovoProduto({ onClose, onCreated }) {
         onChange={(e) => atualizarCampo("obs", e.target.value)}
       />
 
-      <h3>Fotos do produto</h3>
-      <FileUploader
-        folder={`produtos/cadastro`}
-        onUploaded={(file) => handleFotosUpload(file)}
-      />
-
-      {form.fotos.length > 0 ? (
-        <div className="galeria-fotos">
-          {form.fotos.map((foto) => (
-            <div key={foto} className="foto-thumb-wrapper">
-              <img src={foto} alt="foto" className="foto-thumb" />
-              <button
-                type="button"
-                className="foto-thumb-remove"
-                onClick={() => removerFoto(foto)}
-              >
-                ×
-              </button>
-            </div>
-          ))}
+      <div className="files-block">
+        <div className="files-block-header">
+          <p className="files-block-title">Fotos</p>
+          <p className="files-block-subtitle">
+            Após salvar, acesse o produto na listagem para anexar imagens ao
+            estoque.
+          </p>
         </div>
-      ) : (
         <p className="texto-vazio">
-          Nenhuma foto enviada. Adicione imagens do produto!
+          Esta etapa serve apenas para cadastro rápido. As fotos são anexadas na
+          tela de detalhes com o produto já criado.
         </p>
-      )}
+      </div>
 
       <div className="modal-produto-actions">
         <button className="btn-gold" onClick={salvar} disabled={salvando}>

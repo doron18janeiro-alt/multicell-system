@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabaseClient";
 import FileUploader from "../../components/files/FileUploader";
-import "../../components/files/gallery.css";
+import FileGallery from "../../components/files/FileGallery";
 import { imprimir, modeloOS } from "../../utils/print";
 import "./os.css";
 
@@ -13,6 +13,7 @@ export default function DetalhesOS() {
   const navigate = useNavigate();
   const [os, setOs] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   async function carregar() {
     const { data, error } = await supabase
@@ -28,24 +29,6 @@ export default function DetalhesOS() {
 
     setOs(data);
     setLoading(false);
-  }
-
-  async function addFoto(url) {
-    if (!url || !os) return;
-    const novasFotos = [...(os.fotos || []), url];
-
-    const { error } = await supabase
-      .from("os")
-      .update({ fotos: novasFotos })
-      .eq("id", os.id);
-
-    if (error) {
-      console.error("Erro ao salvar fotos:", error);
-      alert("Erro ao salvar fotos");
-      return;
-    }
-
-    setOs({ ...os, fotos: novasFotos });
   }
 
   useEffect(() => {
@@ -107,24 +90,17 @@ export default function DetalhesOS() {
         <h2 className="card-titulo">Fotos da OS</h2>
 
         <FileUploader
-          folder={`os/${os.id}`}
-          onUploaded={(file) => addFoto(file.url)}
+          entidade="os"
+          entidadeId={os.id}
+          onUploaded={() => setGalleryKey((prev) => prev + 1)}
         />
 
-        {os.fotos?.length ? (
-          <div className="galeria-fotos">
-            {os.fotos.map((foto, index) => (
-              <img
-                key={`${foto}-${index}`}
-                src={foto}
-                alt="foto"
-                className="foto-thumb"
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
-        )}
+        <FileGallery
+          key={galleryKey}
+          entidade="os"
+          entidadeId={os.id}
+          allowDelete
+        />
       </div>
     </div>
   );

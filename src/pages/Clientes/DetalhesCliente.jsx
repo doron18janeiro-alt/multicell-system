@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabaseClient";
 import FileUploader from "../../components/files/FileUploader";
-import "../../components/files/gallery.css";
+import FileGallery from "../../components/files/FileGallery";
 import "./clientes.css";
 
 export default function DetalhesCliente() {
@@ -11,6 +11,7 @@ export default function DetalhesCliente() {
 
   const [cliente, setCliente] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   async function carregar() {
     const { data, error } = await supabase
@@ -26,22 +27,6 @@ export default function DetalhesCliente() {
 
     setCliente(data);
     setLoading(false);
-  }
-
-  async function addFoto(url) {
-    if (!url || !cliente) return;
-    const novasFotos = [...(cliente.fotos || []), url];
-
-    const { error } = await supabase
-      .from("clientes")
-      .update({ fotos: novasFotos })
-      .eq("id", cliente.id);
-
-    if (!error) {
-      setCliente({ ...cliente, fotos: novasFotos });
-    } else {
-      console.error("Erro ao salvar foto", error);
-    }
   }
 
   useEffect(() => {
@@ -87,27 +72,20 @@ export default function DetalhesCliente() {
 
       {/* FOTOS */}
       <div className="card-bloco">
-        <h2 className="card-titulo">Fotos do cliente/documentos</h2>
+        <h2 className="card-titulo">Fotos do cliente / documentos</h2>
 
         <FileUploader
-          folder={`clientes/${cliente.id}`}
-          onUploaded={(file) => addFoto(file.url)}
+          entidade="cliente"
+          entidadeId={cliente.id}
+          onUploaded={() => setGalleryKey((prev) => prev + 1)}
         />
 
-        {cliente.fotos?.length ? (
-          <div className="galeria-fotos">
-            {cliente.fotos.map((foto, index) => (
-              <img
-                key={`${foto}-${index}`}
-                src={foto}
-                alt="foto"
-                className="foto-thumb"
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
-        )}
+        <FileGallery
+          key={galleryKey}
+          entidade="cliente"
+          entidadeId={cliente.id}
+          allowDelete
+        />
       </div>
     </div>
   );

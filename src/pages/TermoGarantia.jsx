@@ -6,9 +6,9 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import FileUploader from "../components/files/FileUploader";
+import FileGallery from "../components/files/FileGallery";
 import { supabase } from "../services/supabaseClient";
 import { printElementById, shareElementOnWhatsApp } from "../utils/print";
-import "../components/files/gallery.css";
 import "../styles/garantia.css";
 
 const TERMOS_GARANTIA = [
@@ -92,8 +92,9 @@ export default function TermoGarantia() {
   const [garantia, setGarantia] = useState(garantiaState);
   const [loading, setLoading] = useState(!garantiaState);
   const [erro, setErro] = useState(null);
-  const [salvando, setSalvando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  const [fotosRegistro, setFotosRegistro] = useState([]);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   const carregarGarantia = useCallback(async () => {
     if (!garantiaId) return null;
@@ -148,74 +149,7 @@ export default function TermoGarantia() {
     };
   }, [garantiaId, garantiaState, carregarGarantia]);
 
-  async function atualizarFotos(lista) {
-    if (!garantia?.id) return;
-    setSalvando(true);
-    setErro(null);
-
-    const { data, error } = await supabase
-      .from("garantias")
-      .update({ fotos: lista })
-      .eq("id", garantia.id)
-      .select()
-      .single();
-
-    setSalvando(false);
-
-    if (error) {
-      console.error("[Garantias] erro ao salvar fotos", error);
-      setErro("Não foi possível salvar as fotos agora. Tente novamente.");
-      return;
-    }
-
-    setGarantia(data);
-  }
-
-  async function addFoto(url) {
-    if (!garantia?.id || !url) return;
-    const atual = garantia?.fotos || [];
-    await atualizarFotos([...atual, url]);
-  }
-
-  function handleVoltar() {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate("/historico");
-    }
-  }
-
-  if (loading) {
-    return <p className="loading">Carregando certificado cinematográfico...</p>;
-  }
-
-  const camposProcessados = garantia
-    ? CAMPOS_PRINCIPAIS.map((campo) => {
-        const raw = getFirstValue(garantia, campo.keys);
-        const label = campo.label;
-        if (label === "Valor total") {
-          return { label, value: formatarDinheiro(raw) };
-        }
-        if (
-          label.includes("Data") ||
-          label.includes("válida") ||
-          label.includes("válido")
-        ) {
-          return { label, value: formatarData(raw) };
-        }
-        return { label, value: raw || "—" };
-      })
-    : [];
-
-  const protocolo = garantia
-    ? getFirstValue(garantia, ["protocolo", "numero", "codigo", "id"])
-    : null;
-
-  const observacoes = garantia
-    ? getFirstValue(garantia, OBS_KEYS) || "Nenhuma observação adicional."
-    : "";
-
-  const fotos = garantia?.fotos || [];
+  const fotos = fotosRegistro;
   const dataEmissao =
     garantia?.data_entrega || garantia?.created_at || new Date().toISOString();
   const dataEmissaoFormatada = formatarData(dataEmissao);
@@ -360,28 +294,20 @@ export default function TermoGarantia() {
             <div className="card-bloco">
               <h2 className="card-titulo">Fotos do aparelho</h2>
               <FileUploader
-                folder={garantiaId ? `garantias/${garantiaId}` : undefined}
-                onUploaded={(file) => addFoto(file.url)}
+                entidade="garantia"
+                entidadeId={garantia.id}
+                onUploaded={(lista) => {
+                  setFotosRegistro(lista);
+                  setGalleryKey((prev) => prev + 1);
+                }}
               />
-              {salvando && (
-                <p className="garantia-hint">
-                  Enviando e sincronizando fotos...
-                </p>
-              )}
-              {fotos.length ? (
-                <div className="galeria-fotos">
-                  {fotos.map((foto, index) => (
-                    <img
-                      key={`${foto}-${index}`}
-                      src={foto}
-                      alt="foto"
-                      className="foto-thumb"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
-              )}
+              <FileGallery
+                key={`${garantia.id}-${galleryKey}`}
+                entidade="garantia"
+                entidadeId={garantia.id}
+                allowDelete
+                onChange={setFotosRegistro}
+              />
             </div>
           </div>
 

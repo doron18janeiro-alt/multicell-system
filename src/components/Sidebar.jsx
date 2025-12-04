@@ -30,7 +30,7 @@ export default function Sidebar() {
 
         <div className="sidebar-title-wrapper">
           <h2 className="sidebar-title">PAINEL DE CONTROLE</h2>
-          <p className="sidebar-subtitle">Operação premium, tempo real</p>
+          <p className="sidebar-mini">Multicell System</p>
         </div>
       </div>
       <div className="nav-group">

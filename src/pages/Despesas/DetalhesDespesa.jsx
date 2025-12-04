@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabaseClient";
 import FileUploader from "../../components/files/FileUploader";
-import "../../components/files/gallery.css";
+import FileGallery from "../../components/files/FileGallery";
 import "./despesas.css";
 
 export default function DetalhesDespesa() {
@@ -11,6 +11,7 @@ export default function DetalhesDespesa() {
 
   const [despesa, setDespesa] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   useEffect(() => {
     carregarDespesa();
@@ -31,22 +32,6 @@ export default function DetalhesDespesa() {
 
     setDespesa(data);
     setLoading(false);
-  }
-
-  async function addFoto(url) {
-    if (!url || !despesa) return;
-    const novasFotos = [...(despesa.fotos || []), url];
-    const { error } = await supabase
-      .from("despesas")
-      .update({ fotos: novasFotos })
-      .eq("id", despesa.id);
-
-    if (error) {
-      console.error("Erro ao salvar foto:", error);
-      alert("Erro ao salvar foto");
-    } else {
-      setDespesa({ ...despesa, fotos: novasFotos });
-    }
   }
 
   if (loading) {
@@ -73,11 +58,6 @@ export default function DetalhesDespesa() {
         </button>
         <h1 className="titulo-despesa">Detalhes da Despesa</h1>
       </div>
-
-      <FileUploader
-        folder={`despesas/${despesa.id}`}
-        onUploaded={(file) => addFoto(file.url)}
-      />
 
       <div className="card-bloco">
         <h2 className="card-titulo">Resumo</h2>
@@ -107,6 +87,21 @@ export default function DetalhesDespesa() {
         </div>
       </div>
 
+      <div className="card-bloco">
+        <h2 className="card-titulo">Comprovantes / anexos</h2>
+        <FileUploader
+          entidade="despesa"
+          entidadeId={despesa.id}
+          onUploaded={() => setGalleryKey((prev) => prev + 1)}
+        />
+        <FileGallery
+          key={`${despesa.id}-${galleryKey}`}
+          entidade="despesa"
+          entidadeId={despesa.id}
+          allowDelete
+        />
+      </div>
+
       {despesa.parcelas?.length > 0 && (
         <div className="card-bloco">
           <h2 className="card-titulo">Parcelas</h2>
@@ -132,24 +127,6 @@ export default function DetalhesDespesa() {
             <p>Forma: {pg.forma}</p>
           </div>
         ))}
-      </div>
-
-      <div className="card-bloco">
-        <h2 className="card-titulo">Fotos da Despesa</h2>
-        {despesa.fotos?.length ? (
-          <div className="galeria-fotos">
-            {despesa.fotos.map((foto, index) => (
-              <img
-                key={`${foto}-${index}`}
-                src={foto}
-                alt="foto"
-                className="foto-thumb"
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
-        )}
       </div>
 
       <button

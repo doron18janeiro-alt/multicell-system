@@ -1,31 +1,56 @@
 import React, { useState } from "react";
-import { uploadFile } from "../../services/uploadFile";
+import {
+  uploadFilesForEntity,
+  listFilesForEntity,
+} from "../../services/storageFiles";
+import "./files.css";
 
-export default function FileUploader({ folder, onUploaded }) {
+export default function FileUploader({ entidade, entidadeId, onUploaded }) {
   const [loading, setLoading] = useState(false);
 
-  async function handleUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  async function handleUpload(event) {
+    const arquivos = event.target.files;
+    if (!arquivos || !arquivos.length) return;
+    if (!entidadeId) {
+      alert("Salve o registro antes de enviar arquivos.");
+      event.target.value = "";
+      return;
+    }
 
     setLoading(true);
 
     try {
-      const uploaded = await uploadFile(folder, file);
-      onUploaded(uploaded); // retorna URL + path
-    } catch (err) {
-      alert("Erro ao enviar arquivo: " + err.message);
+      await uploadFilesForEntity({ entidade, entidadeId, files: arquivos });
+      const listaAtualizada = await listFilesForEntity({
+        entidade,
+        entidadeId,
+      });
+      onUploaded?.(listaAtualizada);
+    } catch (error) {
+      alert(error.message || "Erro ao enviar arquivos");
+    } finally {
+      setLoading(false);
+      event.target.value = "";
     }
-
-    setLoading(false);
   }
 
+  const disabled = !entidadeId || loading;
+
   return (
-    <div className="uploader-box">
-      <label className="uploader-label">
-        {loading ? "Enviando..." : "Enviar foto"}
-        <input type="file" accept="image/*" onChange={handleUpload} hidden />
-      </label>
-    </div>
+    <label className={`files-upload-area ${disabled ? "is-disabled" : ""}`}>
+      <div className="files-upload-main">
+        {loading ? "Enviando arquivos..." : "Selecionar imagem(ns)"}
+        <span className="files-upload-hint">
+          Formatos comuns até 5MB. Segure CTRL para múltiplas fotos.
+        </span>
+      </div>
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        disabled={disabled}
+        onChange={handleUpload}
+      />
+    </label>
   );
 }
