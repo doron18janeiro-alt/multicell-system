@@ -8,6 +8,9 @@ const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Os = lazy(() => import("../pages/Os"));
 const Caixa = lazy(() => import("../pages/Caixa"));
 const Estoque = lazy(() => import("../pages/Estoque"));
+const DespesasList = lazy(() => import("../pages/Despesas/Despesas"));
+const NovaDespesa = lazy(() => import("../pages/Despesas/NovaDespesa"));
+const DetalhesDespesa = lazy(() => import("../pages/Despesas/DetalhesDespesa"));
 const Historico = lazy(() => import("../pages/Historico"));
 const Produtos = lazy(() => import("../pages/Produtos"));
 const TermoGarantia = lazy(() => import("../pages/TermoGarantia"));
@@ -53,6 +56,9 @@ export const router = createBrowserRouter([
       { path: "dashboard", element: withSuspense(<Dashboard />) },
       { path: "os", element: withSuspense(<Os />) },
       { path: "caixa", element: withSuspense(<Caixa />) },
+      { path: "despesas", element: withSuspense(<DespesasList />) },
+      { path: "despesas/nova", element: withSuspense(<NovaDespesa />) },
+      { path: "despesas/:id", element: withSuspense(<DetalhesDespesa />) },
       { path: "estoque", element: withSuspense(<Estoque />) },
       { path: "historico", element: withSuspense(<Historico />) },
       { path: "produtos", element: withSuspense(<Produtos />) },

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import OsForm from "../components/OsForm";
 import TermoGarantia from "../components/TermoGarantia";
+import { FileUploader } from "../components/files/FileUploader";
+import { FileGallery } from "../components/files/FileGallery";
+import { printElementById } from "../utils/print";
 import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
 
 const statusDictionary = {
@@ -58,6 +61,10 @@ export default function OsPage() {
   const [termOs, setTermOs] = useState(null);
 
   const debouncedSearch = useDebounced(search, 350);
+
+  const handlePrintOs = () => {
+    printElementById("os-print-area", "Ordem de Serviço");
+  };
 
   useEffect(() => {
     loadOs();
@@ -319,55 +326,68 @@ export default function OsPage() {
                     {selected.cliente_nome}
                   </h2>
                 </div>
-                <button
-                  className="text-slate-500"
-                  onClick={() => setSelected(null)}
-                >
-                  Fechar
-                </button>
+                <div className="flex items-center gap-2">
+                  <button className="btn-gold" onClick={handlePrintOs}>
+                    Imprimir OS
+                  </button>
+                  <button
+                    className="text-slate-500"
+                    onClick={() => setSelected(null)}
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
-              <dl className="mt-4 space-y-3 text-sm text-slate-200">
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Aparelho</dt>
-                  <dd className="text-right">{selected.aparelho || "-"}</dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">IMEI</dt>
-                  <dd className="text-right">{selected.imei || "-"}</dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Problema</dt>
-                  <dd className="text-right text-slate-100">
-                    {selected.problema_relatado}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Senha</dt>
-                  <dd className="text-right">
-                    {selected.senha_aparelho || "—"}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Observações</dt>
-                  <dd className="text-right text-slate-100">
-                    {selected.observacoes || "Sem observações"}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Valor final</dt>
-                  <dd className="text-right">
-                    {formatCurrency(selected.valor_final)}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-slate-400">Entrega</dt>
-                  <dd className="text-right">
-                    {selected.data_entrega
-                      ? formatDate(selected.data_entrega)
-                      : "—"}
-                  </dd>
-                </div>
-              </dl>
+              <div
+                id="os-print-area"
+                className="mt-4 space-y-3 text-sm text-slate-200"
+              >
+                <dl className="space-y-3">
+                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
+                    <dt className="text-slate-400">Aparelho</dt>
+                    <dd className="text-right">{selected.aparelho || "-"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
+                    <dt className="text-slate-400">IMEI</dt>
+                    <dd className="text-right">{selected.imei || "-"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
+                    <dt className="text-slate-400">Problema</dt>
+                    <dd className="text-right text-slate-100">
+                      {selected.problema_relatado}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
+                    <dt className="text-slate-400">Senha</dt>
+                    <dd className="text-right">
+                      {selected.senha_aparelho || "—"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
+                    <dt className="text-slate-400">Observações</dt>
+                    <dd className="text-right text-slate-100">
+                      {selected.observacoes || "Sem observações"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
+                    <dt className="text-slate-400">Valor final</dt>
+                    <dd className="text-right">
+                      {formatCurrency(selected.valor_final)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-400">Entrega</dt>
+                    <dd className="text-right">
+                      {selected.data_entrega
+                        ? formatDate(selected.data_entrega)
+                        : "—"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              <FileUploader ownerType="os" ownerId={selected.id} />
+              <FileGallery ownerType="os" ownerId={selected.id} />
             </div>
           )}
 

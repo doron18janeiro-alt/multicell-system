@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Printer, RefreshCw, ShieldCheck } from "lucide-react";
+import { FileGallery } from "../components/files/FileGallery";
 import { supabase } from "../supabaseClient";
+import { printElementById } from "../utils/print";
 
 const garantiaStyles = `
   .garantia-shell {
@@ -269,6 +271,11 @@ export default function TermoGarantia() {
   const [loadingOs, setLoadingOs] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [selectedOsId, setSelectedOsId] = useState("");
+  const osSelecionada = useMemo(
+    () =>
+      osList.find((item) => String(item.id) === String(selectedOsId)) || null,
+    [osList, selectedOsId]
+  );
 
   useEffect(() => {
     carregarOS();
@@ -328,14 +335,17 @@ export default function TermoGarantia() {
     setEmitidoEm(new Date().toLocaleDateString("pt-BR"));
   };
 
-  const imprimir = () => {
+  const handlePrintGarantia = () => {
     if (!emitidoEm) {
       const proceed = window.confirm(
         "Atualize a pré-visualização antes de imprimir para gerar protocolo e data. Deseja continuar assim mesmo?"
       );
       if (!proceed) return;
     }
-    window.print();
+    printElementById(
+      "garantia-print-area",
+      "CERTIFICADO DE GARANTIA MULTICELL"
+    );
   };
 
   const preview = useMemo(() => {
@@ -393,11 +403,11 @@ export default function TermoGarantia() {
             </button>
             <button
               type="button"
-              className="garantia-btn primary"
-              onClick={imprimir}
+              className="btn-gold"
+              onClick={handlePrintGarantia}
             >
               <Printer size={18} />
-              Imprimir garantia
+              Imprimir certificado
             </button>
           </div>
         </section>
@@ -590,123 +600,147 @@ export default function TermoGarantia() {
             </div>
           </section>
 
-          <section id="garantia-impressao" className="garantia-preview">
-            <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 mb-6">
-              <div className="text-sm tracking-[0.35em] text-slate-500 uppercase">
-                Termo de garantia Multicell
-              </div>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <h2 className="text-2xl font-black text-slate-900">
-                  PROVA DE GARANTIA
-                </h2>
-                <div className="text-right text-sm text-slate-500">
-                  Protocolo:{" "}
-                  <span className="font-semibold text-slate-900">
-                    {preview.protocolo}
-                  </span>
-                  <br />
-                  Emitido em:{" "}
-                  <span className="font-semibold text-slate-900">
-                    {preview.emissao || "--/--/----"}
-                  </span>
+          <div className="space-y-6">
+            <div id="garantia-print-area">
+              <section id="garantia-impressao" className="garantia-preview">
+                <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 mb-6">
+                  <div className="text-sm tracking-[0.35em] text-slate-500 uppercase">
+                    Termo de garantia Multicell
+                  </div>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <h2 className="text-2xl font-black text-slate-900">
+                      CERTIFICADO DE GARANTIA MULTICELL
+                    </h2>
+                    <div className="text-right text-sm text-slate-500">
+                      Protocolo:{" "}
+                      <span className="font-semibold text-slate-900">
+                        {preview.protocolo}
+                      </span>
+                      <br />
+                      Emitido em:{" "}
+                      <span className="font-semibold text-slate-900">
+                        {preview.emissao || "--/--/----"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                <section>
+                  <p className="section-title">Dados da empresa</p>
+                  <div className="grid">
+                    <div>
+                      <span className="label">Empresa</span>
+                      <span className="value">
+                        {preview.empresaNome || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="label">CNPJ</span>
+                      <span className="value">
+                        {preview.empresaCnpj || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="label">Contato</span>
+                      <span className="value">
+                        {preview.empresaFone || "-"}
+                      </span>
+                    </div>
+                    <div className="full">
+                      <span className="label">Endereço</span>
+                      <span className="value">
+                        {preview.empresaEndereco || "-"}
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <p className="section-title">Cliente e aparelho</p>
+                  <div className="grid">
+                    <div>
+                      <span className="label">Cliente</span>
+                      <span className="value">
+                        {preview.clienteNome || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="label">Telefone</span>
+                      <span className="value">
+                        {preview.clienteFone || "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="label">Aparelho</span>
+                      <span className="value">{preview.aparelho || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="label">IMEI</span>
+                      <span className="value">{preview.imei || "-"}</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <p className="section-title">Serviço executado</p>
+                  <div className="grid">
+                    <div className="full">
+                      <span className="label">Descrição</span>
+                      <span className="value">{preview.servico || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="label">Valor</span>
+                      <span className="value">R$ {preview.valorFmt}</span>
+                    </div>
+                    <div>
+                      <span className="label">Prazo da garantia</span>
+                      <span className="value">{preview.prazo || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="label">Data do serviço</span>
+                      <span className="value">{preview.dataFmt}</span>
+                    </div>
+                    <div>
+                      <span className="label">Responsável técnico</span>
+                      <span className="value">{preview.tecnico || "-"}</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <p className="section-title">Condições gerais</p>
+                  <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">
+                    {preview.condicoes}
+                  </p>
+                </section>
+
+                <section className="assinaturas">
+                  <div>
+                    <div className="line">Assinatura do cliente</div>
+                  </div>
+                  <div>
+                    <div className="line">Responsável técnico</div>
+                  </div>
+                </section>
+
+                <p className="text-xs text-slate-500 mt-4">
+                  Ao assinar, o cliente declara que recebeu o equipamento em
+                  perfeito funcionamento e está ciente das condições desta
+                  garantia. Documento gerado por Multicell System.
+                </p>
+              </section>
             </div>
 
-            <section>
-              <p className="section-title">Dados da empresa</p>
-              <div className="grid">
-                <div>
-                  <span className="label">Empresa</span>
-                  <span className="value">{preview.empresaNome || "-"}</span>
-                </div>
-                <div>
-                  <span className="label">CNPJ</span>
-                  <span className="value">{preview.empresaCnpj || "-"}</span>
-                </div>
-                <div>
-                  <span className="label">Contato</span>
-                  <span className="value">{preview.empresaFone || "-"}</span>
-                </div>
-                <div className="full">
-                  <span className="label">Endereço</span>
-                  <span className="value">
-                    {preview.empresaEndereco || "-"}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <p className="section-title">Cliente e aparelho</p>
-              <div className="grid">
-                <div>
-                  <span className="label">Cliente</span>
-                  <span className="value">{preview.clienteNome || "-"}</span>
-                </div>
-                <div>
-                  <span className="label">Telefone</span>
-                  <span className="value">{preview.clienteFone || "-"}</span>
-                </div>
-                <div>
-                  <span className="label">Aparelho</span>
-                  <span className="value">{preview.aparelho || "-"}</span>
-                </div>
-                <div>
-                  <span className="label">IMEI</span>
-                  <span className="value">{preview.imei || "-"}</span>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <p className="section-title">Serviço executado</p>
-              <div className="grid">
-                <div className="full">
-                  <span className="label">Descrição</span>
-                  <span className="value">{preview.servico || "-"}</span>
-                </div>
-                <div>
-                  <span className="label">Valor</span>
-                  <span className="value">R$ {preview.valorFmt}</span>
-                </div>
-                <div>
-                  <span className="label">Prazo da garantia</span>
-                  <span className="value">{preview.prazo || "-"}</span>
-                </div>
-                <div>
-                  <span className="label">Data do serviço</span>
-                  <span className="value">{preview.dataFmt}</span>
-                </div>
-                <div>
-                  <span className="label">Responsável técnico</span>
-                  <span className="value">{preview.tecnico || "-"}</span>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <p className="section-title">Condições gerais</p>
-              <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">
-                {preview.condicoes}
-              </p>
-            </section>
-
-            <section className="assinaturas">
-              <div>
-                <div className="line">Assinatura do cliente</div>
-              </div>
-              <div>
-                <div className="line">Responsável técnico</div>
-              </div>
-            </section>
-
-            <p className="text-xs text-slate-500 mt-4">
-              Ao assinar, o cliente declara que recebeu o equipamento em
-              perfeito funcionamento e está ciente das condições desta garantia.
-              Documento gerado por Multicell System.
-            </p>
-          </section>
+            {osSelecionada && (
+              <section className="garantia-panel">
+                <FileGallery
+                  ownerType="garantia"
+                  ownerId={osSelecionada.id}
+                  allowDelete={false}
+                />
+              </section>
+            )}
+          </div>
         </div>
       </div>
     </div>

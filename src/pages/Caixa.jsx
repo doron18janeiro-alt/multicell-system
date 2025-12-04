@@ -4,6 +4,7 @@ import {
   getVendaDetalhe,
   listVendas,
 } from "../services/caixaService";
+import { printElementById } from "../utils/print";
 
 const paymentOptions = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -88,6 +89,10 @@ export default function Caixa() {
   const [itemDraft, setItemDraft] = useState(() => emptyItem());
   const [saving, setSaving] = useState(false);
   const [formMessage, setFormMessage] = useState(null);
+
+  const handlePrintCupom = () => {
+    printElementById("cupom-print-area", "Cupom de Venda");
+  };
 
   useEffect(() => {
     loadVendas();
@@ -369,57 +374,64 @@ export default function Caixa() {
                       "Cliente não informado"}
                   </h3>
                 </div>
-                <button
-                  className="text-slate-500"
-                  onClick={() => setSelectedVenda(null)}
-                >
-                  Fechar
-                </button>
+                <div className="flex items-center gap-2">
+                  <button className="btn-gold" onClick={handlePrintCupom}>
+                    Imprimir cupom
+                  </button>
+                  <button
+                    className="text-slate-500"
+                    onClick={() => setSelectedVenda(null)}
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
-              <dl className="space-y-2 text-sm text-slate-200">
-                <div className="flex justify-between">
-                  <dt className="text-slate-400">Data</dt>
-                  <dd>{formatDateTime(selectedVenda.venda.data)}</dd>
+              <div id="cupom-print-area" className="space-y-4">
+                <dl className="space-y-2 text-sm text-slate-200">
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Data</dt>
+                    <dd>{formatDateTime(selectedVenda.venda.data)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Pagamento</dt>
+                    <dd>
+                      {paymentOptions.find(
+                        (option) =>
+                          option.value === selectedVenda.venda.forma_pagamento
+                      )?.label || "-"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Total</dt>
+                    <dd className="font-semibold text-white">
+                      {formatCurrency(selectedVenda.venda.total)}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="border-t border-slate-800 pt-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">
+                    Itens
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-100">
+                    {selectedVenda.itens.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-center justify-between text-slate-300"
+                      >
+                        <div>
+                          <p className="text-white">{item.descricao}</p>
+                          <p className="text-xs text-slate-500">
+                            {item.quantidade} un ×{" "}
+                            {formatCurrency(item.preco_unitario)}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-white">
+                          {formatCurrency(item.subtotal)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-slate-400">Pagamento</dt>
-                  <dd>
-                    {paymentOptions.find(
-                      (option) =>
-                        option.value === selectedVenda.venda.forma_pagamento
-                    )?.label || "-"}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-slate-400">Total</dt>
-                  <dd className="font-semibold text-white">
-                    {formatCurrency(selectedVenda.venda.total)}
-                  </dd>
-                </div>
-              </dl>
-              <div className="border-t border-slate-800 pt-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">
-                  Itens
-                </p>
-                <ul className="space-y-2 text-sm text-slate-100">
-                  {selectedVenda.itens.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between text-slate-300"
-                    >
-                      <div>
-                        <p className="text-white">{item.descricao}</p>
-                        <p className="text-xs text-slate-500">
-                          {item.quantidade} un ×{" "}
-                          {formatCurrency(item.preco_unitario)}
-                        </p>
-                      </div>
-                      <span className="text-sm font-semibold text-white">
-                        {formatCurrency(item.subtotal)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
           )}

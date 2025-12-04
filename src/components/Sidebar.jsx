@@ -6,6 +6,7 @@ const links = [
   { label: "Dashboard", path: "/dashboard" },
   { label: "Estoque", path: "/estoque" },
   { label: "Caixa", path: "/caixa" },
+  { label: "Despesas", path: "/despesas" },
   { label: "Histórico", path: "/historico" },
   { label: "Ordens de Serviço", path: "/os" },
   { label: "Termo de Garantia", path: "/garantia" },

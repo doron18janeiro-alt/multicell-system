@@ -1,0 +1,148 @@
+.despesas-container {
+  padding: 2rem;
+  animation: fadeScreen 0.4s ease;
+}
+
+.despesas-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+  margin-bottom: 2rem;
+}
+
+.despesas-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(180deg, #ffd56a, #c8a33b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.despesas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.despesas-table th,
+.despesas-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.status-pendente {
+  background: #d9534f;
+}
+
+.status-parcial {
+  background: #f0ad4e;
+}
+
+.status-pago {
+  background: #5cb85c;
+}
+
+.btn-gold {
+  background: linear-gradient(180deg, #ffd56a, #d3a73e);
+  color: #000;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-gold:hover {
+  filter: brightness(1.08);
+}
+
+.btn-default {
+  width: 100%;
+  margin-top: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.input-default,
+select,
+textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.2rem;
+}
+
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2rem;
+  border-radius: 18px;
+  width: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: loginEnter 0.3s ease;
+  color: #fff;
+}
+
+@keyframes fadeScreen {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loginEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
