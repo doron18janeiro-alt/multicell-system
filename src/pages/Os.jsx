@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import OsForm from "../components/OsForm";
 import TermoGarantia from "../components/TermoGarantia";
-import { FileUploader } from "../components/files/FileUploader";
+import FileUploader from "../components/files/FileUploader";
 import { FileGallery } from "../components/files/FileGallery";
-import { printElementById } from "../utils/print";
+import { printElementById, shareElementOnWhatsApp } from "../utils/print";
 import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
 
 const statusDictionary = {
@@ -66,6 +66,14 @@ export default function OsPage() {
 
   const handlePrintOs = () => {
     printElementById("os-print-area", "Ordem de Serviço");
+  };
+
+  const handleShareOs = () => {
+    if (!selected) return;
+    shareElementOnWhatsApp(
+      "os-print-area",
+      `Ordem de Serviço - ${selected.cliente_nome || "Multicell"}`
+    );
   };
 
   useEffect(() => {
@@ -339,6 +347,12 @@ export default function OsPage() {
                     Imprimir OS
                   </button>
                   <button
+                    className="btn-gold btn-ghost"
+                    onClick={handleShareOs}
+                  >
+                    Compartilhar
+                  </button>
+                  <button
                     className="text-slate-500"
                     onClick={() => setSelected(null)}
                   >
@@ -394,7 +408,10 @@ export default function OsPage() {
                 </dl>
               </div>
 
-              <FileUploader ownerType="os" ownerId={selected.id} />
+              <FileUploader
+                folder={`os/${selected.id}`}
+                onUploaded={(file) => console.log("Foto enviada:", file)}
+              />
               <FileGallery ownerType="os" ownerId={selected.id} />
             </div>
           )}

@@ -75,6 +75,22 @@
   - created_at (timestamp, default now())
   - updated_at (timestamp, default now())
 
+- **garantias**
+
+  - id (uuid, PK)
+  - os_id (uuid, FK -> os.id, opcional)
+  - cliente (text)
+  - telefone (text)
+  - aparelho (text)
+  - imei (text, opcional)
+  - servico (text)
+  - valor (numeric)
+  - data_entrega (date)
+  - data_validade (date)
+  - obs (text)
+  - fotos (text[] default '{}')
+  - created_at (timestamp, default now())
+
 ```sql
 create table if not exists public.vendas (
   id uuid primary key default gen_random_uuid(),
@@ -140,5 +156,21 @@ create table if not exists public.configuracoes (
   tema text not null default 'multicell' check (tema in ('dark','light','multicell')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists public.garantias (
+  id uuid primary key default gen_random_uuid(),
+  os_id uuid references public.os(id) on delete set null,
+  cliente text not null,
+  telefone text,
+  aparelho text not null,
+  imei text,
+  servico text not null,
+  valor numeric(12,2) default 0,
+  data_entrega date,
+  data_validade date,
+  obs text,
+  fotos text[] not null default '{}',
+  created_at timestamptz not null default now()
 );
 ```

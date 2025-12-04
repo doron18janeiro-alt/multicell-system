@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { supabase } from "../../services/supabase";
+import { supabase } from "../../services/supabaseClient";
 import FileUploader from "../../components/files/FileUploader";
-import FileGallery from "../../components/files/FileGallery";
+import "../../components/files/gallery.css";
 import "./produto.css";
 
 export default function NovoProduto({ onClose, onCreated }) {
@@ -21,8 +21,14 @@ export default function NovoProduto({ onClose, onCreated }) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   };
 
-  const handleFotosUpload = (urls = []) => {
+  const handleFotosUpload = (arquivos) => {
+    const itens = Array.isArray(arquivos) ? arquivos : [arquivos];
+    const urls = itens
+      .map((item) => (typeof item === "string" ? item : item?.url))
+      .filter(Boolean);
+
     if (!urls.length) return;
+
     setForm((prev) => ({ ...prev, fotos: [...prev.fotos, ...urls] }));
   };
 
@@ -117,12 +123,30 @@ export default function NovoProduto({ onClose, onCreated }) {
       />
 
       <h3>Fotos do produto</h3>
-      <FileUploader folder={`produtos/temp`} onUploaded={handleFotosUpload} />
+      <FileUploader
+        folder={`produtos/cadastro`}
+        onUploaded={(file) => handleFotosUpload(file)}
+      />
 
-      {form.fotos.length > 0 && (
-        <div className="modal-fotos-preview">
-          <FileGallery files={form.fotos} onDelete={removerFoto} />
+      {form.fotos.length > 0 ? (
+        <div className="galeria-fotos">
+          {form.fotos.map((foto) => (
+            <div key={foto} className="foto-thumb-wrapper">
+              <img src={foto} alt="foto" className="foto-thumb" />
+              <button
+                type="button"
+                className="foto-thumb-remove"
+                onClick={() => removerFoto(foto)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
         </div>
+      ) : (
+        <p className="texto-vazio">
+          Nenhuma foto enviada. Adicione imagens do produto!
+        </p>
       )}
 
       <div className="modal-produto-actions">

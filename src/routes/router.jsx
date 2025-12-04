@@ -63,6 +63,7 @@ export const router = createBrowserRouter([
       { path: "historico", element: withSuspense(<Historico />) },
       { path: "produtos", element: withSuspense(<Produtos />) },
       { path: "garantia", element: withSuspense(<TermoGarantia />) },
+      { path: "garantia/:id", element: withSuspense(<TermoGarantia />) },
       { path: "relatorios", element: withSuspense(<Relatorios />) },
       { path: "config", element: withSuspense(<Config />) },
       { path: "config/usuarios", element: withSuspense(<ConfigUsuarios />) },

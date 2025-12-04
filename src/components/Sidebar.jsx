@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "../services/supabase";
+import { supabase } from "../services/supabaseClient";
 import Logo from "../assets/logo.png";
 
 const links = [
@@ -29,7 +29,7 @@ export default function Sidebar() {
         <img src={Logo} alt="Logo Multicell" className="sidebar-logo" />
 
         <div className="sidebar-title-wrapper">
-          <h2 className="sidebar-title">CENTRAL DE COMANDO</h2>
+          <h2 className="sidebar-title">PAINEL DE CONTROLE</h2>
           <p className="sidebar-subtitle">Operação premium, tempo real</p>
         </div>
       </div>

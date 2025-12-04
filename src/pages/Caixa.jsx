@@ -4,7 +4,7 @@ import {
   getVendaDetalhe,
   listVendas,
 } from "../services/caixaService";
-import { printElementById } from "../utils/print";
+import { imprimir, modeloCupomVenda, printElementById } from "../utils/print";
 
 const paymentOptions = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -48,6 +48,8 @@ const formatCurrency = (value) => {
   });
 };
 
+const formatValueNumber = (value) => Number(value || 0).toFixed(2);
+
 const formatDateTime = (iso) => {
   if (!iso) return "-";
   const date = new Date(iso);
@@ -65,6 +67,39 @@ const defaultCabecalho = () => ({
   forma_pagamento: "dinheiro",
   observacoes: "",
 });
+
+const PRINTER_IP = import.meta.env.VITE_PRINTER_IP || "192.168.0.150";
+const AUTO_PRINT_VENDA = import.meta.env.VITE_AUTO_PRINT_VENDA === "true";
+
+function montarCupomFromDetalhe(det) {
+  if (!det) return null;
+  const itens = (det.itens || []).map((item) => ({
+    nome: item.descricao,
+    qtd: item.quantidade,
+    total: formatValueNumber(item.subtotal),
+  }));
+  return {
+    cliente: det.venda?.cliente_nome || "Cliente não informado",
+    data: formatDateTime(det.venda?.data),
+    itens,
+    total: formatValueNumber(det.venda?.total),
+  };
+}
+
+function montarCupomFromForm(cabecalho, itens) {
+  return {
+    cliente: cabecalho.cliente_nome || "Cliente não informado",
+    data: new Date(cabecalho.data || new Date()).toLocaleString("pt-BR"),
+    itens: itens.map((item) => ({
+      nome: item.descricao,
+      qtd: item.quantidade,
+      total: formatValueNumber(item.subtotal),
+    })),
+    total: formatValueNumber(
+      itens.reduce((sum, item) => sum + Number(item.subtotal || 0), 0)
+    ),
+  };
+}
 
 export default function Caixa() {
   const [filters, setFilters] = useState(() => {
@@ -92,6 +127,16 @@ export default function Caixa() {
 
   const handlePrintCupom = () => {
     printElementById("cupom-print-area", "Cupom de Venda");
+  };
+
+  const handlePrintTermico = () => {
+    if (!selectedVenda) return;
+    const payload = montarCupomFromDetalhe(selectedVenda);
+    if (!payload) return;
+    const qrUrl = selectedVenda?.venda?.id
+      ? `${window.location.origin}/vendas/${selectedVenda.venda.id}`
+      : undefined;
+    imprimir(PRINTER_IP, modeloCupomVenda(payload), { qrUrl });
   };
 
   useEffect(() => {
@@ -207,6 +252,10 @@ export default function Caixa() {
       return;
     }
     setFormMessage({ type: "success", text: "Venda registrada com sucesso." });
+    if (AUTO_PRINT_VENDA) {
+      const modelo = montarCupomFromForm(cabecalho, itens);
+      imprimir(PRINTER_IP, modeloCupomVenda(modelo));
+    }
     loadVendas();
     setTimeout(() => {
       setDrawerOpen(false);
@@ -376,7 +425,10 @@ export default function Caixa() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button className="btn-gold" onClick={handlePrintCupom}>
-                    Imprimir cupom
+                    PDF/A4
+                  </button>
+                  <button className="btn-gold" onClick={handlePrintTermico}>
+                    Imprimir térmica
                   </button>
                   <button
                     className="text-slate-500"

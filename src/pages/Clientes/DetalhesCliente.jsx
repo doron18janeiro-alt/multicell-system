@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "../../services/supabase";
+import { supabase } from "../../services/supabaseClient";
 import FileUploader from "../../components/files/FileUploader";
-import FileGallery from "../../components/files/FileGallery";
+import "../../components/files/gallery.css";
 import "./clientes.css";
 
 export default function DetalhesCliente() {
@@ -28,29 +28,19 @@ export default function DetalhesCliente() {
     setLoading(false);
   }
 
-  async function adicionarFotos(urls) {
-    const lista = [...(cliente.fotos || []), ...urls];
+  async function addFoto(url) {
+    if (!url || !cliente) return;
+    const novasFotos = [...(cliente.fotos || []), url];
 
     const { error } = await supabase
       .from("clientes")
-      .update({ fotos: lista })
+      .update({ fotos: novasFotos })
       .eq("id", cliente.id);
 
     if (!error) {
-      setCliente({ ...cliente, fotos: lista });
-    }
-  }
-
-  async function removerFoto(url) {
-    const novaLista = cliente.fotos.filter((x) => x !== url);
-
-    const { error } = await supabase
-      .from("clientes")
-      .update({ fotos: novaLista })
-      .eq("id", cliente.id);
-
-    if (!error) {
-      setCliente({ ...cliente, fotos: novaLista });
+      setCliente({ ...cliente, fotos: novasFotos });
+    } else {
+      console.error("Erro ao salvar foto", error);
     }
   }
 
@@ -101,11 +91,23 @@ export default function DetalhesCliente() {
 
         <FileUploader
           folder={`clientes/${cliente.id}`}
-          label="Enviar fotos"
-          onUploaded={(urls) => adicionarFotos(urls)}
+          onUploaded={(file) => addFoto(file.url)}
         />
 
-        <FileGallery files={cliente.fotos || []} onDelete={removerFoto} />
+        {cliente.fotos?.length ? (
+          <div className="galeria-fotos">
+            {cliente.fotos.map((foto, index) => (
+              <img
+                key={`${foto}-${index}`}
+                src={foto}
+                alt="foto"
+                className="foto-thumb"
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
+        )}
       </div>
     </div>
   );

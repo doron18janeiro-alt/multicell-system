@@ -1,748 +1,532 @@
-import { useEffect, useMemo, useState } from "react";
-import { Printer, RefreshCw, ShieldCheck } from "lucide-react";
-import { FileGallery } from "../components/files/FileGallery";
-import { supabase } from "../supabaseClient";
-import { printElementById } from "../utils/print";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import FileUploader from "../components/files/FileUploader";
+import { supabase } from "../services/supabaseClient";
+import { printElementById, shareElementOnWhatsApp } from "../utils/print";
+import "../components/files/gallery.css";
+import "../styles/garantia.css";
 
-const garantiaStyles = `
-  .garantia-shell {
-    position: relative;
-    min-height: 100vh;
-    padding-bottom: 4rem;
-  }
+const TERMOS_GARANTIA = [
+  "A garantia cobre exclusivamente o serviço executado e/ou peça substituída na Multicell.",
+  "Quaisquer sinais de queda, impacto, oxidação, líquidos ou mau uso anulam o certificado.",
+  "A violação de lacres, intervenção de terceiros ou abertura não autorizada invalida a cobertura.",
+  "Peças substituídas obedecem ao prazo legal do fornecedor e precisam ser avaliadas em nossa assistência.",
+  "Para acionar a garantia, apresente este certificado junto a um documento pessoal.",
+];
 
-  .garantia-shell::before,
-  .garantia-shell::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
+const CAMPOS_PRINCIPAIS = [
+  { label: "Cliente", keys: ["cliente", "cliente_nome", "nome_cliente"] },
+  { label: "Contato", keys: ["telefone", "cliente_telefone", "contato"] },
+  { label: "Aparelho", keys: ["aparelho", "device", "equipamento"] },
+  { label: "IMEI / Série", keys: ["imei", "serial", "numero_serie"] },
+  {
+    label: "Serviço executado",
+    keys: ["servico", "descricao", "servico_executado"],
+  },
+  { label: "Valor total", keys: ["valor", "valor_total", "valor_servico"] },
+  {
+    label: "Garantia válida até",
+    keys: ["data_validade", "validade", "garantia_fim"],
+  },
+  {
+    label: "Data da entrega",
+    keys: ["data_entrega", "entrega", "data_finalizacao"],
+  },
+  { label: "Responsável técnico", keys: ["tecnico", "responsavel", "usuario"] },
+];
 
-  .garantia-shell::before {
-    background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.45), transparent 60%),
-                radial-gradient(circle at 70% 0%, rgba(236, 72, 153, 0.35), transparent 55%),
-                #010311;
-    opacity: 0.9;
-  }
+const OBS_KEYS = ["obs", "observacoes", "observacao", "notas"];
 
-  .garantia-shell::after {
-    background-image:
-      linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
-    background-size: 120px 120px;
-    mix-blend-mode: screen;
-    opacity: 0.5;
-  }
+const PRINT_ROOT_ID = "garantia-print-root";
 
-  .garantia-content {
-    position: relative;
-    z-index: 1;
-    padding: 3rem 1.5rem;
-  }
-
-  .garantia-hero {
-    border-radius: 36px;
-    padding: 3rem;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    background: rgba(2, 6, 23, 0.7);
-    box-shadow: 0 35px 120px rgba(2, 6, 23, 0.8);
-    backdrop-filter: blur(28px);
-  }
-
-  .garantia-panel,
-  .garantia-preview {
-    border-radius: 32px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    background: rgba(2, 6, 23, 0.72);
-    box-shadow: 0 30px 100px rgba(3, 7, 18, 0.75);
-    backdrop-filter: blur(26px);
-    padding: 2.5rem;
-  }
-
-  .garantia-form-grid {
-    display: grid;
-    gap: 1.2rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-
-  .garantia-form-grid .full {
-    grid-column: 1 / -1;
-  }
-
-  .garantia-input {
-    border-radius: 18px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    background: rgba(15, 23, 42, 0.7);
-    color: #e2e8f0;
-    padding: 0.85rem 1.1rem;
-    width: 100%;
-  }
-
-  .garantia-input:focus {
-    outline: 2px solid rgba(59, 130, 246, 0.6);
-    background: rgba(15, 23, 42, 0.9);
-  }
-
-  .garantia-preview {
-    background: linear-gradient(135deg, #f8fafc, #ffffff);
-    color: #0f172a;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow:
-      0 40px 120px rgba(2, 6, 23, 0.35),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.6);
-  }
-
-  .garantia-preview section + section {
-    margin-top: 1.75rem;
-  }
-
-  .garantia-preview .section-title {
-    font-size: 0.9rem;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: #475569;
-    margin-bottom: 0.5rem;
-  }
-
-  .garantia-preview .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.85rem;
-  }
-
-  .garantia-preview .grid .full {
-    grid-column: 1 / -1;
-  }
-
-  .garantia-preview .label {
-    display: block;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.25em;
-    color: #94a3b8;
-    margin-bottom: 0.1rem;
-  }
-
-  .garantia-preview .value {
-    font-weight: 600;
-    color: #0f172a;
-  }
-
-  .assinaturas {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-  }
-
-  .assinaturas .line {
-    border-top: 1px solid rgba(15, 23, 42, 0.4);
-    padding-top: 0.75rem;
-    text-align: center;
-    font-size: 0.85rem;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: #475569;
-  }
-
-  .garantia-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-
-  .garantia-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 1rem;
-    border-radius: 999px;
-    border: 1px solid rgba(96, 165, 250, 0.5);
-    color: #e0f2fe;
-    font-size: 0.75rem;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-  }
-
-  .garantia-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-radius: 16px;
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    padding: 0.85rem 1.4rem;
-    color: #e2e8f0;
-    background: rgba(15, 23, 42, 0.6);
-  }
-
-  .garantia-btn.primary {
-    border-color: transparent;
-    background: linear-gradient(110deg, #7c3aed, #2563eb, #0ea5e9);
-    color: white;
-    box-shadow: 0 20px 45px rgba(14, 165, 233, 0.35);
-  }
-
-  .garantia-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .garantia-alert {
-    border-radius: 18px;
-    background: rgba(244, 63, 94, 0.12);
-    border: 1px solid rgba(248, 113, 113, 0.4);
-    color: #fecdd3;
-    padding: 0.9rem 1rem;
-  }
-
-  @media print {
-    body {
-      background: white;
-    }
-
-    .garantia-shell::before,
-    .garantia-shell::after,
-    .garantia-hero,
-    .garantia-panel,
-    .garantia-actions,
-    .garantia-chip,
-    .garantia-alert {
-      display: none !important;
-    }
-
-    #garantia-impressao {
-      box-shadow: none !important;
-      border: none !important;
-      padding: 0;
-      background: white !important;
-      color: #0f172a;
+function getFirstValue(source, keys) {
+  if (!source) return "";
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
     }
   }
-`;
-
-const empresaDefaults = {
-  empresaNome: "Multicell System",
-  empresaCnpj: "00.000.000/0000-00",
-  empresaFone: "(43) 9 8800-0000",
-  empresaEndereco: "Rua da Tecnologia, 450 - Centro, Londrina/PR",
-  prazo: "90 dias",
-};
-
-const camposIniciais = {
-  empresaNome: "",
-  empresaCnpj: "",
-  empresaFone: "",
-  empresaEndereco: "",
-  clienteNome: "",
-  clienteFone: "",
-  aparelho: "",
-  imei: "",
-  servico: "",
-  valor: "",
-  prazo: "",
-  data: "",
-  tecnico: "",
-  condicoes: "",
-};
-
-const condicoesPadrao =
-  "Garantia válida exclusivamente para o serviço descrito, por prazo determinado, com perda automática em casos de impacto, oxidação, violação de lacres, intervenção de terceiros ou mau uso do equipamento.";
-
-function gerarProtocoloGarantia() {
-  const agora = new Date();
-  const ano = agora.getFullYear();
-  const sequencia = Math.floor(agora.getTime() % 100000);
-  return `GAR-${ano}-${String(sequencia).padStart(5, "0")}`;
+  return "";
 }
 
-function formatDateBr(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("pt-BR");
+function formatarData(valor) {
+  if (!valor) return "—";
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) {
+    return String(valor);
+  }
+  return data.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+}
+
+function formatarDinheiro(valor) {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  const numero = Number(valor);
+  if (Number.isNaN(numero)) return String(valor);
+  return numero.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
 }
 
 export default function TermoGarantia() {
-  const [form, setForm] = useState({ ...camposIniciais, ...empresaDefaults });
-  const [protocolo, setProtocolo] = useState("GAR-00000");
-  const [emitidoEm, setEmitidoEm] = useState("");
-  const [osList, setOsList] = useState([]);
-  const [loadingOs, setLoadingOs] = useState(false);
-  const [feedback, setFeedback] = useState("");
-  const [selectedOsId, setSelectedOsId] = useState("");
-  const osSelecionada = useMemo(
-    () =>
-      osList.find((item) => String(item.id) === String(selectedOsId)) || null,
-    [osList, selectedOsId]
-  );
+  const params = useParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    carregarOS();
-  }, []);
+  const garantiaState = location.state?.garantia || null;
+  const garantiaId =
+    params?.id ||
+    searchParams.get("id") ||
+    location.state?.garantiaId ||
+    garantiaState?.id ||
+    null;
 
-  async function carregarOS() {
-    setLoadingOs(true);
-    setFeedback("");
+  const [garantia, setGarantia] = useState(garantiaState);
+  const [loading, setLoading] = useState(!garantiaState);
+  const [erro, setErro] = useState(null);
+  const [salvando, setSalvando] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
+
+  const carregarGarantia = useCallback(async () => {
+    if (!garantiaId) return null;
+
     const { data, error } = await supabase
-      .from("os")
-      .select(
-        "id, cliente_nome, cliente_telefone, aparelho, imei, valor_final, valor_orcado, observacoes, problema_relatado, data_entrega, updated_at, data_entrada"
-      )
-      .eq("status", "concluida")
-      .order("updated_at", { ascending: false })
-      .limit(30);
+      .from("garantias")
+      .select("*")
+      .eq("id", garantiaId)
+      .single();
 
     if (error) {
-      console.error("[TermoGarantia] Erro ao carregar OS", error);
-      setFeedback(
-        "Não foi possível carregar OS concluídas. Confira conexão com o Supabase."
-      );
-    } else {
-      setOsList(data || []);
+      throw error;
     }
-    setLoadingOs(false);
+
+    return data;
+  }, [garantiaId]);
+
+  useEffect(() => {
+    if (garantiaState) {
+      setGarantia(garantiaState);
+      setLoading(false);
+      return;
+    }
+
+    if (!garantiaId) {
+      setLoading(false);
+      return;
+    }
+
+    let ignore = false;
+    setLoading(true);
+    setErro(null);
+
+    carregarGarantia()
+      .then((data) => {
+        if (ignore || !data) return;
+        setGarantia(data);
+      })
+      .catch((error) => {
+        if (ignore) return;
+        console.error("[Garantias] erro ao carregar certificado", error);
+        setErro("Não encontramos este certificado na base Multicell.");
+        setGarantia(null);
+      })
+      .finally(() => {
+        if (ignore) return;
+        setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [garantiaId, garantiaState, carregarGarantia]);
+
+  async function atualizarFotos(lista) {
+    if (!garantia?.id) return;
+    setSalvando(true);
+    setErro(null);
+
+    const { data, error } = await supabase
+      .from("garantias")
+      .update({ fotos: lista })
+      .eq("id", garantia.id)
+      .select()
+      .single();
+
+    setSalvando(false);
+
+    if (error) {
+      console.error("[Garantias] erro ao salvar fotos", error);
+      setErro("Não foi possível salvar as fotos agora. Tente novamente.");
+      return;
+    }
+
+    setGarantia(data);
   }
 
-  const handleField = (field) => (event) => {
-    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  async function addFoto(url) {
+    if (!garantia?.id || !url) return;
+    const atual = garantia?.fotos || [];
+    await atualizarFotos([...atual, url]);
+  }
+
+  function handleVoltar() {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/historico");
+    }
+  }
+
+  if (loading) {
+    return <p className="loading">Carregando certificado cinematográfico...</p>;
+  }
+
+  const camposProcessados = garantia
+    ? CAMPOS_PRINCIPAIS.map((campo) => {
+        const raw = getFirstValue(garantia, campo.keys);
+        const label = campo.label;
+        if (label === "Valor total") {
+          return { label, value: formatarDinheiro(raw) };
+        }
+        if (
+          label.includes("Data") ||
+          label.includes("válida") ||
+          label.includes("válido")
+        ) {
+          return { label, value: formatarData(raw) };
+        }
+        return { label, value: raw || "—" };
+      })
+    : [];
+
+  const protocolo = garantia
+    ? getFirstValue(garantia, ["protocolo", "numero", "codigo", "id"])
+    : null;
+
+  const observacoes = garantia
+    ? getFirstValue(garantia, OBS_KEYS) || "Nenhuma observação adicional."
+    : "";
+
+  const fotos = garantia?.fotos || [];
+  const dataEmissao =
+    garantia?.data_entrega || garantia?.created_at || new Date().toISOString();
+  const dataEmissaoFormatada = formatarData(dataEmissao);
+  const folhaStyle = {
+    background: "#ffffff",
+    color: "#0f1015",
+    borderRadius: "24px",
+    padding: "40px",
+    boxShadow: "0 25px 65px rgba(0, 0, 0, 0.55)",
+    position: "relative",
   };
 
-  const handleSelectOs = (value) => {
-    setSelectedOsId(value);
-    const os = osList.find((item) => String(item.id) === String(value));
-    if (!os) return;
-
-    const fonteValor = os.valor_final ?? os.valor_orcado ?? "";
-
-    setForm((prev) => ({
-      ...prev,
-      clienteNome: os.cliente_nome || "",
-      clienteFone: os.cliente_telefone || "",
-      aparelho: os.aparelho || "",
-      imei: os.imei || "",
-      servico: os.observacoes || os.problema_relatado || prev.servico,
-      valor: fonteValor ? Number(fonteValor).toFixed(2) : "",
-      data: (os.data_entrega || os.updated_at || os.data_entrada || "").slice(
-        0,
-        10
-      ),
-    }));
+  const infoListStyle = {
+    display: "grid",
+    gap: "12px",
+    marginBottom: "24px",
   };
 
-  const atualizarPreview = () => {
-    setProtocolo(gerarProtocoloGarantia());
-    setEmitidoEm(new Date().toLocaleDateString("pt-BR"));
+  const infoRowStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    borderBottom: "1px solid rgba(15, 16, 21, 0.08)",
+    paddingBottom: "8px",
+  };
+
+  const fotosGridStyle = {
+    display: "grid",
+    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+    marginTop: "12px",
+  };
+
+  const handleAtualizarOSConcluidas = async () => {
+    if (!garantiaId) return;
+    setSincronizando(true);
+    setErro(null);
+
+    try {
+      const data = await carregarGarantia();
+      if (data) {
+        setGarantia(data);
+      }
+    } catch (error) {
+      console.error("[Garantias] erro ao sincronizar certificado", error);
+      setErro("Não foi possível sincronizar as OS concluídas agora.");
+    } finally {
+      setSincronizando(false);
+    }
   };
 
   const handlePrintGarantia = () => {
-    if (!emitidoEm) {
-      const proceed = window.confirm(
-        "Atualize a pré-visualização antes de imprimir para gerar protocolo e data. Deseja continuar assim mesmo?"
-      );
-      if (!proceed) return;
-    }
-    printElementById(
-      "garantia-print-area",
-      "CERTIFICADO DE GARANTIA MULTICELL"
+    if (!garantia) return;
+    printElementById(PRINT_ROOT_ID);
+  };
+
+  const handleShareWhatsapp = () => {
+    if (!garantia) return;
+    shareElementOnWhatsApp(
+      PRINT_ROOT_ID,
+      "Certificado de garantia Multicell System"
     );
   };
 
-  const preview = useMemo(() => {
-    const valorNumerico = Number(
-      String(form.valor).replace(/\./g, "").replace(",", ".")
-    );
-    const valorFmt = Number.isNaN(valorNumerico)
-      ? form.valor || "0,00"
-      : valorNumerico.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
-
-    return {
-      ...form,
-      valorFmt,
-      protocolo,
-      emissao: emitidoEm,
-      dataFmt: formatDateBr(form.data),
-      condicoes: form.condicoes?.trim() || condicoesPadrao,
-    };
-  }, [form, protocolo, emitidoEm]);
-
   return (
-    <div className="garantia-shell">
-      <style>{garantiaStyles}</style>
-      <div className="garantia-content space-y-8">
-        <section className="garantia-hero space-y-4">
-          <div className="garantia-chip">
-            <ShieldCheck size={16} />
-            garantia oficial multicell
-          </div>
-          <div className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.4em] text-slate-300">
-              Assistência técnica premium
-            </p>
-            <h1 className="text-3xl md:text-4xl font-black text-white">
-              Termo de Garantia cinematográfico
-            </h1>
-            <p className="text-slate-300 max-w-3xl">
-              Gere protocolos assináveis e prontos para impressão em um fluxo
-              elegante. Sincronize dados das ordens concluídas, personalize
-              condições e entregue confiança para cada cliente.
-            </p>
-          </div>
-          <div className="garantia-actions">
-            <button
-              type="button"
-              className="garantia-btn"
-              onClick={carregarOS}
-              disabled={loadingOs}
-            >
-              <RefreshCw
-                size={16}
-                className={loadingOs ? "animate-spin" : ""}
-              />
-              Atualizar OS concluídas
-            </button>
-            <button
-              type="button"
-              className="btn-gold"
-              onClick={handlePrintGarantia}
-            >
-              <Printer size={18} />
-              Imprimir certificado
-            </button>
-          </div>
-        </section>
+    <div className="garantia-container">
+      <button className="btn-voltar" onClick={handleVoltar}>
+        Voltar
+      </button>
 
-        <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
-          <section className="garantia-panel space-y-6">
-            <div className="space-y-3">
-              <p className="text-sm uppercase tracking-[0.4em] text-slate-400">
-                Preenchimento inteligente
+      <h1 className="garantia-titulo">CERTIFICADO DE GARANTIA MULTICELL</h1>
+
+      {garantia && (
+        <div className="garantia-actions">
+          <button
+            type="button"
+            className="btn-gold"
+            onClick={handleAtualizarOSConcluidas}
+            disabled={sincronizando}
+          >
+            {sincronizando ? "Sincronizando..." : "Atualizar OS concluídas"}
+          </button>
+          <button
+            type="button"
+            className="btn-gold"
+            onClick={handlePrintGarantia}
+          >
+            Imprimir certificado
+          </button>
+          <button
+            type="button"
+            className="btn-gold btn-ghost"
+            onClick={handleShareWhatsapp}
+          >
+            Enviar por WhatsApp
+          </button>
+        </div>
+      )}
+
+      {erro && (
+        <div className="card-bloco erro-garantia">
+          <h2 className="card-titulo">Ops!</h2>
+          <p>{erro}</p>
+        </div>
+      )}
+
+      {!garantia && (
+        <div className="card-bloco">
+          <h2 className="card-titulo">Selecione um certificado</h2>
+          <p>
+            Abra este módulo a partir de uma Ordem de Serviço ou do histórico
+            para visualizar os detalhes e registrar fotos do aparelho.
+          </p>
+        </div>
+      )}
+
+      {garantia && (
+        <div style={gridWrapperStyle}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "30px" }}
+          >
+            <div className="card-bloco">
+              <h2 className="card-titulo">Informações do serviço</h2>
+
+              {protocolo && (
+                <p>
+                  <strong>Protocolo:</strong> {protocolo}
+                </p>
+              )}
+
+              {camposProcessados.map((campo) => (
+                <p key={campo.label}>
+                  <strong>{campo.label}:</strong> {campo.value}
+                </p>
+              ))}
+
+              <p>
+                <strong>Observações:</strong> {observacoes}
               </p>
-              <h2 className="text-2xl font-semibold text-white">
-                Dados da garantia
-              </h2>
-              <p className="text-slate-400">
-                Escolha uma OS concluída para pré-preencher os campos ou digite
-                manualmente.
-              </p>
-              <div className="grid gap-3 md:grid-cols-[2fr_auto]">
-                <select
-                  className="garantia-input"
-                  value={selectedOsId}
-                  onChange={(event) => handleSelectOs(event.target.value)}
-                >
-                  <option value="">Selecione uma OS concluída</option>
-                  {osList.map((os) => (
-                    <option key={os.id} value={os.id}>
-                      #{String(os.id).padStart(4, "0")} · {os.cliente_nome} ·{" "}
-                      {os.aparelho}
-                    </option>
+            </div>
+
+            <div className="card-bloco">
+              <h2 className="card-titulo">Fotos do aparelho</h2>
+              <FileUploader
+                folder={garantiaId ? `garantias/${garantiaId}` : undefined}
+                onUploaded={(file) => addFoto(file.url)}
+              />
+              {salvando && (
+                <p className="garantia-hint">
+                  Enviando e sincronizando fotos...
+                </p>
+              )}
+              {fotos.length ? (
+                <div className="galeria-fotos">
+                  {fotos.map((foto, index) => (
+                    <img
+                      key={`${foto}-${index}`}
+                      src={foto}
+                      alt="foto"
+                      className="foto-thumb"
+                    />
                   ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={atualizarPreview}
-                  className="garantia-btn w-full md:w-auto justify-center"
-                >
-                  <ShieldCheck size={16} />
-                  Atualizar pré-visualização
-                </button>
-              </div>
-              {feedback && (
-                <div className="garantia-alert text-sm">{feedback}</div>
+                </div>
+              ) : (
+                <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
               )}
             </div>
+          </div>
 
-            <div className="garantia-form-grid">
-              <div className="full">
-                <label className="text-sm text-slate-300">
-                  Nome da empresa
-                </label>
-                <input
-                  className="garantia-input"
-                  value={form.empresaNome}
-                  onChange={handleField("empresaNome")}
-                  placeholder="Multicell System"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">CNPJ</label>
-                <input
-                  className="garantia-input"
-                  value={form.empresaCnpj}
-                  onChange={handleField("empresaCnpj")}
-                  placeholder="00.000.000/0000-00"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">Contato</label>
-                <input
-                  className="garantia-input"
-                  value={form.empresaFone}
-                  onChange={handleField("empresaFone")}
-                  placeholder="(43) 9 8800-0000"
-                />
-              </div>
-              <div className="full">
-                <label className="text-sm text-slate-300">Endereço</label>
-                <input
-                  className="garantia-input"
-                  value={form.empresaEndereco}
-                  onChange={handleField("empresaEndereco")}
-                  placeholder="Rua, número - bairro, cidade/UF"
-                />
+          <div>
+            <div id={PRINT_ROOT_ID} style={folhaStyle}>
+              <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                <p
+                  className="muted"
+                  style={{
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Protocolo {protocolo || "—"}
+                </p>
+                <h2
+                  className="garantia-title"
+                  style={{ color: "#0f1015", fontSize: "1.5rem" }}
+                >
+                  CERTIFICADO DE GARANTIA MULTICELL
+                </h2>
+                <p className="muted">Emitido em {dataEmissaoFormatada}</p>
               </div>
 
-              <div className="full border-t border-white/5 my-2" />
-
-              <div>
-                <label className="text-sm text-slate-300">Cliente</label>
-                <input
-                  className="garantia-input"
-                  value={form.clienteNome}
-                  onChange={handleField("clienteNome")}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">Telefone</label>
-                <input
-                  className="garantia-input"
-                  value={form.clienteFone}
-                  onChange={handleField("clienteFone")}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">Aparelho</label>
-                <input
-                  className="garantia-input"
-                  value={form.aparelho}
-                  onChange={handleField("aparelho")}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">
-                  IMEI (opcional)
-                </label>
-                <input
-                  className="garantia-input"
-                  value={form.imei}
-                  onChange={handleField("imei")}
-                />
-              </div>
-
-              <div className="full">
-                <label className="text-sm text-slate-300">
-                  Descrição do serviço
-                </label>
-                <textarea
-                  className="garantia-input"
-                  rows={3}
-                  value={form.servico}
-                  onChange={handleField("servico")}
-                  placeholder="Ex: troca de tela OLED e revisão completa"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-slate-300">Valor (R$)</label>
-                <input
-                  className="garantia-input"
-                  value={form.valor}
-                  onChange={handleField("valor")}
-                  placeholder="250,00"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">
-                  Prazo de garantia
-                </label>
-                <input
-                  className="garantia-input"
-                  value={form.prazo}
-                  onChange={handleField("prazo")}
-                  placeholder="90 dias"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">
-                  Data do serviço
-                </label>
-                <input
-                  type="date"
-                  className="garantia-input"
-                  value={form.data}
-                  onChange={handleField("data")}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">
-                  Responsável técnico
-                </label>
-                <input
-                  className="garantia-input"
-                  value={form.tecnico}
-                  onChange={handleField("tecnico")}
-                />
-              </div>
-
-              <div className="full">
-                <label className="text-sm text-slate-300">
-                  Condições específicas da garantia
-                </label>
-                <textarea
-                  className="garantia-input"
-                  rows={3}
-                  value={form.condicoes}
-                  onChange={handleField("condicoes")}
-                  placeholder={condicoesPadrao}
-                />
-              </div>
-            </div>
-          </section>
-
-          <div className="space-y-6">
-            <div id="garantia-print-area">
-              <section id="garantia-impressao" className="garantia-preview">
-                <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 mb-6">
-                  <div className="text-sm tracking-[0.35em] text-slate-500 uppercase">
-                    Termo de garantia Multicell
+              <div style={infoListStyle}>
+                {camposProcessados.map((campo) => (
+                  <div key={campo.label} style={infoRowStyle}>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      {campo.label}
+                    </span>
+                    <span style={{ fontSize: "0.95rem" }}>{campo.value}</span>
                   </div>
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <h2 className="text-2xl font-black text-slate-900">
-                      CERTIFICADO DE GARANTIA MULTICELL
-                    </h2>
-                    <div className="text-right text-sm text-slate-500">
-                      Protocolo:{" "}
-                      <span className="font-semibold text-slate-900">
-                        {preview.protocolo}
-                      </span>
-                      <br />
-                      Emitido em:{" "}
-                      <span className="font-semibold text-slate-900">
-                        {preview.emissao || "--/--/----"}
-                      </span>
-                    </div>
+                ))}
+              </div>
+
+              <div style={{ marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    letterSpacing: "0.18em",
+                    fontSize: "0.9rem",
+                    textTransform: "uppercase",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Observações
+                </h3>
+                <p style={{ lineHeight: 1.6 }}>{observacoes}</p>
+              </div>
+
+              {fotos.length > 0 && (
+                <div style={{ marginBottom: "24px" }}>
+                  <h3
+                    style={{
+                      letterSpacing: "0.18em",
+                      fontSize: "0.9rem",
+                      textTransform: "uppercase",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Registro fotográfico
+                  </h3>
+                  <div style={fotosGridStyle}>
+                    {fotos.map((foto) => (
+                      <img
+                        key={foto}
+                        src={foto}
+                        alt="Registro fotográfico do aparelho"
+                        style={{
+                          width: "100%",
+                          borderRadius: "16px",
+                          border: "1px solid rgba(15, 16, 21, 0.12)",
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
+              )}
 
-                <section>
-                  <p className="section-title">Dados da empresa</p>
-                  <div className="grid">
-                    <div>
-                      <span className="label">Empresa</span>
-                      <span className="value">
-                        {preview.empresaNome || "-"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="label">CNPJ</span>
-                      <span className="value">
-                        {preview.empresaCnpj || "-"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="label">Contato</span>
-                      <span className="value">
-                        {preview.empresaFone || "-"}
-                      </span>
-                    </div>
-                    <div className="full">
-                      <span className="label">Endereço</span>
-                      <span className="value">
-                        {preview.empresaEndereco || "-"}
-                      </span>
-                    </div>
-                  </div>
-                </section>
+              <div style={{ marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    letterSpacing: "0.18em",
+                    fontSize: "0.9rem",
+                    textTransform: "uppercase",
+                    marginBottom: "12px",
+                  }}
+                >
+                  Termos da garantia
+                </h3>
+                <ol className="garantia-termos">
+                  {TERMOS_GARANTIA.map((texto, index) => (
+                    <li key={texto}>
+                      <strong>{index + 1}.</strong> {texto}
+                    </li>
+                  ))}
+                </ol>
+              </div>
 
-                <section>
-                  <p className="section-title">Cliente e aparelho</p>
-                  <div className="grid">
-                    <div>
-                      <span className="label">Cliente</span>
-                      <span className="value">
-                        {preview.clienteNome || "-"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="label">Telefone</span>
-                      <span className="value">
-                        {preview.clienteFone || "-"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="label">Aparelho</span>
-                      <span className="value">{preview.aparelho || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="label">IMEI</span>
-                      <span className="value">{preview.imei || "-"}</span>
-                    </div>
-                  </div>
-                </section>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "24px",
+                  marginTop: "24px",
+                  textAlign: "center",
+                }}
+              >
+                <div>
+                  <p>_______________________________</p>
+                  <span
+                    style={{
+                      letterSpacing: "0.15em",
+                      textTransform: "uppercase",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Assinatura do Técnico
+                  </span>
+                </div>
 
-                <section>
-                  <p className="section-title">Serviço executado</p>
-                  <div className="grid">
-                    <div className="full">
-                      <span className="label">Descrição</span>
-                      <span className="value">{preview.servico || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="label">Valor</span>
-                      <span className="value">R$ {preview.valorFmt}</span>
-                    </div>
-                    <div>
-                      <span className="label">Prazo da garantia</span>
-                      <span className="value">{preview.prazo || "-"}</span>
-                    </div>
-                    <div>
-                      <span className="label">Data do serviço</span>
-                      <span className="value">{preview.dataFmt}</span>
-                    </div>
-                    <div>
-                      <span className="label">Responsável técnico</span>
-                      <span className="value">{preview.tecnico || "-"}</span>
-                    </div>
-                  </div>
-                </section>
-
-                <section>
-                  <p className="section-title">Condições gerais</p>
-                  <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-line">
-                    {preview.condicoes}
-                  </p>
-                </section>
-
-                <section className="assinaturas">
-                  <div>
-                    <div className="line">Assinatura do cliente</div>
-                  </div>
-                  <div>
-                    <div className="line">Responsável técnico</div>
-                  </div>
-                </section>
-
-                <p className="text-xs text-slate-500 mt-4">
-                  Ao assinar, o cliente declara que recebeu o equipamento em
-                  perfeito funcionamento e está ciente das condições desta
-                  garantia. Documento gerado por Multicell System.
-                </p>
-              </section>
+                <div>
+                  <p>_______________________________</p>
+                  <span
+                    style={{
+                      letterSpacing: "0.15em",
+                      textTransform: "uppercase",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Assinatura do Cliente
+                  </span>
+                </div>
+              </div>
             </div>
-
-            {osSelecionada && (
-              <section className="garantia-panel">
-                <FileGallery
-                  ownerType="garantia"
-                  ownerId={osSelecionada.id}
-                  allowDelete={false}
-                />
-              </section>
-            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

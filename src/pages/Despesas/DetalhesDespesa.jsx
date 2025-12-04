@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "../../services/supabase";
+import { supabase } from "../../services/supabaseClient";
+import FileUploader from "../../components/files/FileUploader";
+import "../../components/files/gallery.css";
 import "./despesas.css";
-
-const BUCKET = "multicell-files";
 
 export default function DetalhesDespesa() {
   const { id } = useParams();
@@ -11,7 +11,6 @@ export default function DetalhesDespesa() {
 
   const [despesa, setDespesa] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     carregarDespesa();
@@ -34,79 +33,20 @@ export default function DetalhesDespesa() {
     setLoading(false);
   }
 
-  async function salvarFotosNovas(novasFotos) {
-    if (!despesa || novasFotos.length === 0) return;
-
-    const listaAtual = despesa.fotos || [];
-    const listaFinal = [...listaAtual, ...novasFotos];
-
+  async function addFoto(url) {
+    if (!url || !despesa) return;
+    const novasFotos = [...(despesa.fotos || []), url];
     const { error } = await supabase
       .from("despesas")
-      .update({ fotos: listaFinal })
+      .update({ fotos: novasFotos })
       .eq("id", despesa.id);
 
     if (error) {
-      console.error(error);
-      alert("Erro ao salvar foto!");
-      return;
+      console.error("Erro ao salvar foto:", error);
+      alert("Erro ao salvar foto");
+    } else {
+      setDespesa({ ...despesa, fotos: novasFotos });
     }
-
-    setDespesa((prev) => ({ ...prev, fotos: listaFinal }));
-  }
-
-  async function removerFoto(urlParaRemover) {
-    if (!despesa?.fotos) return;
-
-    const novaLista = despesa.fotos.filter((item) => item !== urlParaRemover);
-
-    const { error } = await supabase
-      .from("despesas")
-      .update({ fotos: novaLista })
-      .eq("id", despesa.id);
-
-    if (error) {
-      console.error(error);
-      alert("Erro ao remover foto!");
-      return;
-    }
-
-    setDespesa((prev) => ({ ...prev, fotos: novaLista }));
-  }
-
-  async function handleUpload(event) {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-
-    setUploading(true);
-    const novasUrls = [];
-
-    for (const file of files) {
-      const fileName = `${Date.now()}-${file.name}`;
-      const path = `despesas/${id}/${fileName}`;
-
-      const { error } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, { upsert: false });
-
-      if (error) {
-        console.error(error);
-        alert("Erro ao enviar arquivo.");
-        continue;
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-      novasUrls.push(publicUrl);
-    }
-
-    if (novasUrls.length) {
-      await salvarFotosNovas(novasUrls);
-    }
-
-    setUploading(false);
-    event.target.value = "";
   }
 
   if (loading) {
@@ -133,6 +73,11 @@ export default function DetalhesDespesa() {
         </button>
         <h1 className="titulo-despesa">Detalhes da Despesa</h1>
       </div>
+
+      <FileUploader
+        folder={`despesas/${despesa.id}`}
+        onUploaded={(file) => addFoto(file.url)}
+      />
 
       <div className="card-bloco">
         <h2 className="card-titulo">Resumo</h2>
@@ -191,32 +136,20 @@ export default function DetalhesDespesa() {
 
       <div className="card-bloco">
         <h2 className="card-titulo">Fotos da Despesa</h2>
-        <label className="btn-voltar upload-label">
-          <input
-            type="file"
-            multiple
-            onChange={handleUpload}
-            disabled={uploading}
-          />
-          {uploading ? "Enviando..." : "Adicionar fotos"}
-        </label>
-
-        <div className="galeria-bloco">
-          {despesa.fotos?.length ? (
-            <div className="file-gallery-grid">
-              {despesa.fotos.map((url) => (
-                <div key={url} className="file-thumb">
-                  <img src={url} alt="Foto da despesa" />
-                  <button type="button" onClick={() => removerFoto(url)}>
-                    Excluir
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
-          )}
-        </div>
+        {despesa.fotos?.length ? (
+          <div className="galeria-fotos">
+            {despesa.fotos.map((foto, index) => (
+              <img
+                key={`${foto}-${index}`}
+                src={foto}
+                alt="foto"
+                className="foto-thumb"
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
+        )}
       </div>
 
       <button

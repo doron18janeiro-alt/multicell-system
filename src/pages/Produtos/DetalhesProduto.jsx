@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "../../services/supabase";
+import { supabase } from "../../services/supabaseClient";
 import FileUploader from "../../components/files/FileUploader";
-import FileGallery from "../../components/files/FileGallery";
+import "../../components/files/gallery.css";
 import "./produto.css";
 
 export default function DetalhesProduto() {
@@ -32,12 +32,12 @@ export default function DetalhesProduto() {
     carregar();
   }, [id]);
 
-  async function adicionarFotos(fotosNovas = []) {
-    if (!fotosNovas.length || !produto) return;
-    const lista = [...(produto.fotos || []), ...fotosNovas];
+  async function addFoto(url) {
+    if (!url || !produto) return;
+    const novasFotos = [...(produto.fotos || []), url];
     const { error } = await supabase
       .from("produtos")
-      .update({ fotos: lista })
+      .update({ fotos: novasFotos })
       .eq("id", id);
 
     if (error) {
@@ -46,24 +46,7 @@ export default function DetalhesProduto() {
       return;
     }
 
-    setProduto((prev) => ({ ...prev, fotos: lista }));
-  }
-
-  async function removerFoto(url) {
-    if (!produto?.fotos) return;
-    const lista = produto.fotos.filter((foto) => foto !== url);
-    const { error } = await supabase
-      .from("produtos")
-      .update({ fotos: lista })
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("Erro ao remover foto");
-      return;
-    }
-
-    setProduto((prev) => ({ ...prev, fotos: lista }));
+    setProduto((prev) => ({ ...prev, fotos: novasFotos }));
   }
 
   if (loading) {
@@ -116,9 +99,22 @@ export default function DetalhesProduto() {
         <h2>Fotos do produto</h2>
         <FileUploader
           folder={`produtos/${id}`}
-          onUploaded={(urls) => adicionarFotos(urls)}
+          onUploaded={(file) => addFoto(file.url)}
         />
-        <FileGallery files={produto.fotos || []} onDelete={removerFoto} />
+        {produto.fotos?.length ? (
+          <div className="galeria-fotos">
+            {produto.fotos.map((foto, index) => (
+              <img
+                key={`${foto}-${index}`}
+                src={foto}
+                alt="foto"
+                className="foto-thumb"
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="texto-vazio">Nenhuma foto enviada ainda.</p>
+        )}
       </div>
     </div>
   );

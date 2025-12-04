@@ -7,3 +7,5 @@ dist
 .env.test
 
 .vercel
+
+tmp_*.txt

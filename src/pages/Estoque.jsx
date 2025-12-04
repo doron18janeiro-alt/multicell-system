@@ -168,31 +168,31 @@ export default function Estoque() {
               placeholder="Nome ou código"
             />
           </div>
-              {editing ? (
-                <ProdutoForm
-                  initialData={editing}
-                  loading={saving}
-                  onSave={handleSaveProduto}
-                  onCancel={() => {
-                    setDrawerOpen(false);
-                    setEditing(null);
-                  }}
-                />
-              ) : (
-                <NovoProduto
-                  onCreated={handleProdutoCriado}
-                  onClose={() => {
-                    setDrawerOpen(false);
-                    setEditing(null);
-                  }}
-                />
-              )}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-slate-400">
+              Categoria
+            </label>
+            <select
+              value={categoria}
+              onChange={(event) => setCategoria(event.target.value)}
+              className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-100"
+            >
               {categorias.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat === "todos" ? "Todas" : cat}
                 </option>
               ))}
             </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs uppercase tracking-wide text-slate-400">
+              Status
+            </label>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-300">
+              {loading
+                ? "Carregando estoque..."
+                : `${produtos.length} itens encontrados`}
+            </div>
           </div>
         </div>
         {feedback && (

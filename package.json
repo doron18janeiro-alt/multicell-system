@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
+    "body-parser": "^2.2.1",
     "clsx": "^2.1.0",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-network": "^3.0.0-alpha.5",
+    "express": "^5.2.1",
     "framer-motion": "^10.18.0",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.0",
