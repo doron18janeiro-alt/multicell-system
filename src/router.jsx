@@ -6,6 +6,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Os = lazy(() => import("./pages/Os"));
 const Caixa = lazy(() => import("./pages/Caixa"));
 const Estoque = lazy(() => import("./pages/Estoque"));
+const DetalhesProduto = lazy(() => import("./pages/Produtos/DetalhesProduto"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
 const Config = lazy(() => import("./pages/Config"));
 const Login = lazy(() => import("./pages/Login"));
@@ -84,6 +85,14 @@ export function createAppRouter({ user, onLogout }) {
           element: (
             <ProtectedRoute user={user}>
               {withSuspense(<Estoque />)}
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "produtos/:id",
+          element: (
+            <ProtectedRoute user={user}>
+              {withSuspense(<DetalhesProduto />)}
             </ProtectedRoute>
           ),
         },

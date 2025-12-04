@@ -17,8 +17,13 @@ const sanitizeString = (value) => {
   return trimmed.length ? trimmed : null;
 };
 
+const sanitizeFotos = (value) => {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item) => typeof item === "string" && item.length);
+};
+
 function normalizeProdutoPayload(payload = {}) {
-  return {
+  const normalized = {
     nome: payload.nome?.trim(),
     codigo: sanitizeString(payload.codigo),
     categoria: sanitizeString(payload.categoria),
@@ -29,6 +34,13 @@ function normalizeProdutoPayload(payload = {}) {
     ativo: payload.ativo !== undefined ? Boolean(payload.ativo) : true,
     updated_at: new Date().toISOString(),
   };
+
+  const fotos = sanitizeFotos(payload.fotos);
+  if (fotos !== undefined) {
+    normalized.fotos = fotos;
+  }
+
+  return normalized;
 }
 
 export async function listProdutos({ busca, categoria } = {}) {

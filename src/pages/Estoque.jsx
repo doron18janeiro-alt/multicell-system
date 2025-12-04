@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProdutoForm from "../components/ProdutoForm";
-import { FileUploader } from "../components/files/FileUploader";
-import { FileGallery } from "../components/files/FileGallery";
 import {
   createProduto,
   inativarProduto,
   listProdutos,
   updateProduto,
 } from "../services/estoqueService";
+import NovoProduto from "./Produtos/NovoProduto";
 
 const formatCurrency = (value) => {
   const numeric = Number(value);
@@ -31,6 +31,7 @@ function useDebounced(value, delay = 400) {
 }
 
 export default function Estoque() {
+  const navigate = useNavigate();
   const [busca, setBusca] = useState("");
   const debouncedBusca = useDebounced(busca);
   const [categoria, setCategoria] = useState("todos");
@@ -41,7 +42,6 @@ export default function Estoque() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [selectedProduto, setSelectedProduto] = useState(null);
 
   useEffect(() => {
     loadProdutos();
@@ -78,10 +78,6 @@ export default function Estoque() {
     }
     const safeData = data || [];
     setProdutos(safeData);
-    setSelectedProduto((prev) => {
-      if (!prev) return null;
-      return safeData.find((item) => item.id === prev.id) || null;
-    });
     setCategoriaOptions((prev) => {
       const merged = new Set(prev);
       safeData.forEach((item) => {
@@ -100,6 +96,10 @@ export default function Estoque() {
   function handleEditProduto(produto) {
     setEditing(produto);
     setDrawerOpen(true);
+  }
+
+  function handleProdutoCriado() {
+    loadProdutos();
   }
 
   async function handleSaveProduto(values) {
@@ -128,9 +128,6 @@ export default function Estoque() {
     if (error) {
       alert(error.message || "Não foi possível inativar o produto.");
       return;
-    }
-    if (selectedProduto?.id === produto.id) {
-      setSelectedProduto(null);
     }
     loadProdutos();
   }
@@ -171,15 +168,25 @@ export default function Estoque() {
               placeholder="Nome ou código"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-slate-400">
-              Categoria
-            </label>
-            <select
-              value={categoria}
-              onChange={(event) => setCategoria(event.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-100"
-            >
+              {editing ? (
+                <ProdutoForm
+                  initialData={editing}
+                  loading={saving}
+                  onSave={handleSaveProduto}
+                  onCancel={() => {
+                    setDrawerOpen(false);
+                    setEditing(null);
+                  }}
+                />
+              ) : (
+                <NovoProduto
+                  onCreated={handleProdutoCriado}
+                  onClose={() => {
+                    setDrawerOpen(false);
+                    setEditing(null);
+                  }}
+                />
+              )}
               {categorias.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat === "todos" ? "Todas" : cat}
@@ -249,9 +256,9 @@ export default function Estoque() {
                       <td className="px-4 py-3 text-right space-x-2">
                         <button
                           className="text-xs rounded-lg border border-slate-600 px-3 py-1 text-slate-200 hover:bg-slate-800"
-                          onClick={() => setSelectedProduto(produto)}
+                          onClick={() => navigate(`/produtos/${produto.id}`)}
                         >
-                          Detalhes
+                          Visualizar
                         </button>
                         <button
                           className="text-xs rounded-lg border border-slate-700 px-3 py-1 text-slate-200 hover:bg-slate-800"
@@ -303,63 +310,20 @@ export default function Estoque() {
               </div>
             </div>
           </div>
-
-          {selectedProduto ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Produto selecionado
-                  </p>
-                  <h2 className="text-xl font-semibold text-white">
-                    {selectedProduto.nome}
-                  </h2>
-                </div>
-                <button
-                  className="text-slate-500 hover:text-white"
-                  onClick={() => setSelectedProduto(null)}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <dl className="space-y-2 text-sm text-slate-200">
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Categoria</dt>
-                  <dd className="text-right">
-                    {selectedProduto.categoria || "-"}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Código</dt>
-                  <dd className="text-right">
-                    {selectedProduto.codigo || "-"}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                  <dt className="text-slate-400">Quantidade</dt>
-                  <dd className="text-right">
-                    {selectedProduto.quantidade ?? 0}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-slate-400">Preço venda</dt>
-                  <dd className="text-right">
-                    {formatCurrency(selectedProduto.preco_venda)}
-                  </dd>
-                </div>
-              </dl>
-
-              <FileUploader ownerType="produto" ownerId={selectedProduto.id} />
-              <FileGallery ownerType="produto" ownerId={selectedProduto.id} />
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-5 text-center text-sm text-slate-400">
-              {loading || produtos.length
-                ? "Selecione um produto para ver anexos."
-                : "Cadastre um produto para começar."}
-            </div>
-          )}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-300 space-y-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Galeria premium
+            </p>
+            <p>
+              Clique em <strong>Visualizar</strong> na tabela para abrir a ficha
+              completa do produto com upload múltiplo de fotos e galeria em tela
+              cheia.
+            </p>
+            <p className="text-slate-400">
+              Lá você poderá adicionar, pré-visualizar e remover imagens
+              diretamente do Supabase Storage.
+            </p>
+          </div>
         </aside>
       </div>
 

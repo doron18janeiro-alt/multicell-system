@@ -1,13 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../services/supabase";
 import "./files.css";
 
-export function FileGallery({ ownerType, ownerId, allowDelete = true }) {
-  const [files, setFiles] = useState([]);
+export function FileGallery({
+  ownerType,
+  ownerId,
+  files: externalFiles,
+  allowDelete = true,
+  onDelete,
+}) {
+  const [internalFiles, setInternalFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
 
+  const controlled = useMemo(
+    () => Array.isArray(externalFiles),
+    [externalFiles]
+  );
+
   useEffect(() => {
+    if (controlled) return;
     if (!ownerId) return;
     let ignore = false;
 
@@ -24,7 +36,7 @@ export function FileGallery({ ownerType, ownerId, allowDelete = true }) {
         if (error) {
           console.error(error);
         } else {
-          setFiles(data || []);
+          setInternalFiles(data || []);
         }
         setLoading(false);
       }
@@ -34,19 +46,17 @@ export function FileGallery({ ownerType, ownerId, allowDelete = true }) {
     return () => {
       ignore = true;
     };
-  }, [ownerType, ownerId]);
+  }, [controlled, ownerId, ownerType]);
 
-  async function handleDelete(file) {
+  async function handleDeleteFromDatabase(file) {
     if (!allowDelete) return;
     const ok = window.confirm("Remover esta imagem?");
     if (!ok) return;
 
-    // 1) Remove do storage
     if (file.file_path) {
       await supabase.storage.from("multicell-files").remove([file.file_path]);
     }
 
-    // 2) Remove da tabela
     const { error } = await supabase
       .from("arquivos_multicell")
       .delete()
@@ -57,24 +67,34 @@ export function FileGallery({ ownerType, ownerId, allowDelete = true }) {
       return;
     }
 
-    setFiles((prev) => prev.filter((f) => f.id !== file.id));
+    setInternalFiles((prev) => prev.filter((f) => f.id !== file.id));
   }
 
-  if (!ownerId) return null;
+  const filesToRender = controlled
+    ? (externalFiles || []).map((url) => ({ id: url, public_url: url }))
+    : internalFiles;
+
+  const showEmptyState = !controlled
+    ? filesToRender.length === 0 && !loading
+    : filesToRender.length === 0;
+
+  if (!controlled && !ownerId) return null;
 
   return (
     <div className="files-gallery">
       <div className="files-gallery-header">
         <span className="files-gallery-title">Galeria de imagens</span>
-        {loading && <span className="files-gallery-badge">Carregando...</span>}
+        {loading && !controlled && (
+          <span className="files-gallery-badge">Carregando...</span>
+        )}
       </div>
 
-      {files.length === 0 && !loading && (
+      {showEmptyState && (
         <p className="files-gallery-empty">Nenhuma imagem vinculada ainda.</p>
       )}
 
       <div className="files-grid">
-        {files.map((file) => (
+        {filesToRender.map((file) => (
           <div
             key={file.id}
             className="files-item"
@@ -88,9 +108,13 @@ export function FileGallery({ ownerType, ownerId, allowDelete = true }) {
             {allowDelete && (
               <button
                 className="files-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(file);
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (controlled) {
+                    onDelete?.(file.public_url);
+                  } else {
+                    handleDeleteFromDatabase(file);
+                  }
                 }}
               >
                 Remover
@@ -110,3 +134,5 @@ export function FileGallery({ ownerType, ownerId, allowDelete = true }) {
     </div>
   );
 }
+
+export default FileGallery;
