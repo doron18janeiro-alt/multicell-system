@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 const AppLayout = lazy(() => import("./layouts/AppLayout"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Os = lazy(() => import("./pages/Os"));
+const DetalhesOS = lazy(() => import("./pages/OS/DetalhesOS"));
 const Caixa = lazy(() => import("./pages/Caixa"));
 const Estoque = lazy(() => import("./pages/Estoque"));
 const DetalhesProduto = lazy(() => import("./pages/Produtos/DetalhesProduto"));
@@ -26,6 +27,14 @@ function CinematicFallback() {
           <p className="text-lg font-semibold text-white">
             Preparando módulos avançados…
           </p>
+        {
+          path: "os/:id",
+          element: (
+            <ProtectedRoute user={user}>
+              {withSuspense(<DetalhesOS />)}
+            </ProtectedRoute>
+          ),
+        },
         </div>
       </div>
     </div>

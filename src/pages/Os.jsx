@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import OsForm from "../components/OsForm";
 import TermoGarantia from "../components/TermoGarantia";
 import { FileUploader } from "../components/files/FileUploader";
@@ -49,6 +50,7 @@ function formatDate(iso) {
 }
 
 export default function OsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("todos");
   const [items, setItems] = useState([]);
@@ -244,6 +246,12 @@ export default function OsPage() {
                           onClick={() => setSelected(os)}
                         >
                           Ver detalhes
+                        </button>
+                        <button
+                          className="text-xs rounded-lg border border-amber-600 px-3 py-1 text-amber-200 hover:bg-amber-600/20"
+                          onClick={() => navigate(`/os/${os.id}`)}
+                        >
+                          Fotos
                         </button>
                         <button
                           className="text-xs rounded-lg border border-indigo-600 px-3 py-1 text-indigo-200 hover:bg-indigo-600/20"

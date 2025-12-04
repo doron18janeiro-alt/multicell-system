@@ -9,7 +9,15 @@ const BUCKET = "multicell-files";
  * 1) ownerType/ownerId -> mantém compatibilidade com anexos vinculados
  * 2) folder -> faz upload direto para uma pasta e devolve URLs públicas
  */
-export function FileUploader({ ownerType, ownerId, folder, onUploaded }) {
+export function FileUploader({
+  ownerType,
+  ownerId,
+  folder,
+  onUploaded,
+  label,
+  title,
+  subtitle,
+}) {
   const [uploading, setUploading] = useState(false);
 
   const sanitizedFolder = useMemo(() => {
@@ -125,13 +133,16 @@ export function FileUploader({ ownerType, ownerId, folder, onUploaded }) {
     }
   }
 
+  const heading = title || "Fotos / Anexos";
+  const subheading =
+    subtitle || "Arraste ou selecione imagens do aparelho, nota, cliente, etc.";
+  const idleLabel = label || "Clique para enviar imagens";
+
   return (
     <div className="files-block">
       <div className="files-block-header">
-        <span className="files-block-title">Fotos / Anexos</span>
-        <span className="files-block-subtitle">
-          Arraste ou selecione imagens do aparelho, nota, cliente, etc.
-        </span>
+        <span className="files-block-title">{heading}</span>
+        <span className="files-block-subtitle">{subheading}</span>
       </div>
 
       <label
@@ -148,7 +159,7 @@ export function FileUploader({ ownerType, ownerId, folder, onUploaded }) {
         />
         <div>
           <span className="files-upload-main">
-            {uploading ? "Enviando..." : "Clique para enviar imagens"}
+            {uploading ? "Enviando..." : idleLabel}
           </span>
           {!canUpload && (
             <span className="files-upload-hint">
