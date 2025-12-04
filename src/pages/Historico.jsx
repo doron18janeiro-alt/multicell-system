@@ -1,86 +1,120 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../services/supabaseClient";
+import "../styles/historico.css";
+
+function formatCurrency(value) {
+  const numero = Number(value) || 0;
+  return numero.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return value;
+  return data.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function Historico() {
-  const navigate = useNavigate();
   const [vendas, setVendas] = useState([]);
   const [ordens, setOrdens] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     carregar();
   }, []);
 
   async function carregar() {
-    const { data: vend } = await supabase
-      .from("vendas")
-      .select("*")
-      .order("data", { ascending: false });
-    const { data: os } = await supabase
-      .from("ordens")
-      .select("*")
-      .order("created_at", { ascending: false });
+    setLoading(true);
+    const [{ data: vend }, { data: os }] = await Promise.all([
+      supabase.from("vendas").select("*").order("data", { ascending: false }),
+      supabase
+        .from("ordens")
+        .select("*")
+        .order("created_at", { ascending: false }),
+    ]);
+
     setVendas(vend || []);
     setOrdens(os || []);
+    setLoading(false);
   }
 
   return (
-    <div className="page">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h1>Histórico</h1>
-      </div>
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <div className="panel-title">Histórico de Vendas</div>
-            <p className="panel-subtitle">Listagem de vendas registradas</p>
-          </div>
-        </div>
-        <div className="os-list">
-          {vendas.map((v) => (
-            <div key={v.id} className="os-card">
-              <div className="flex" style={{ justifyContent: "space-between" }}>
-                <span>
-                  {new Date(v.data || v.created_at).toLocaleString("pt-BR")}
-                </span>
-                <strong>R$ {(Number(v.total) || 0).toFixed(2)}</strong>
-              </div>
-              <div className="muted">
-                {v.pagamento || v.forma_pagamento || "Pagamento"}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="historico-page">
+      <header className="historico-header">
+        <p className="historico-eyebrow">Operações</p>
+        <h1 className="historico-title">Central de Histórico</h1>
+        <p className="historico-description">
+          Acompanhe cada venda registrada e a trajetória completa das ordens de
+          serviço com o mesmo visual premium das demais telas.
+        </p>
+      </header>
 
-      <div className="panel">
-        <div className="panel-header">
+      <section className="historico-section">
+        <div className="historico-section-head">
           <div>
-            <div className="panel-title">Histórico de OS</div>
-            <p className="panel-subtitle">Ordens de serviço registradas</p>
+            <span className="historico-kicker">Vendas</span>
+            <h2>Histórico de Vendas</h2>
+            <p>Listagem de vendas registradas</p>
           </div>
         </div>
-        <div className="os-list">
-          {ordens.map((o) => (
-            <div key={o.id} className="os-card">
-              <div className="flex" style={{ justifyContent: "space-between" }}>
-                <span>{o.cliente}</span>
-                <strong>{o.status}</strong>
+
+        <div className="historico-grid">
+          {vendas.length === 0 && !loading && (
+            <p className="historico-empty">Nenhuma venda encontrada.</p>
+          )}
+          {vendas.map((venda) => (
+            <article key={venda.id} className="historico-card">
+              <div className="historico-card-top">
+                <span>{formatDate(venda.data || venda.created_at)}</span>
+                <strong>{formatCurrency(venda.total)}</strong>
               </div>
-              <div className="muted">
-                {o.aparelho} — {o.servico} — R${" "}
-                {(Number(o.valor) || 0).toFixed(2)}
+              <div className="historico-card-bottom">
+                <p>{venda.pagamento || venda.forma_pagamento || "Pagamento"}</p>
               </div>
-            </div>
+            </article>
           ))}
         </div>
-      </div>
+      </section>
+
+      <section className="historico-section">
+        <div className="historico-section-head">
+          <div>
+            <span className="historico-kicker">Ordens de Serviço</span>
+            <h2>Histórico de OS</h2>
+            <p>Ordens de serviço registradas</p>
+          </div>
+        </div>
+
+        <div className="historico-grid">
+          {ordens.length === 0 && !loading && (
+            <p className="historico-empty">Nenhuma OS encontrada.</p>
+          )}
+          {ordens.map((ordem) => (
+            <article key={ordem.id} className="historico-card">
+              <div className="historico-card-top">
+                <span>{ordem.cliente || "Cliente desconhecido"}</span>
+                <strong>{ordem.status || "—"}</strong>
+              </div>
+              <div className="historico-card-bottom">
+                <p>
+                  {ordem.aparelho || "Aparelho"}
+                  {ordem.servico ? ` • ${ordem.servico}` : ""}
+                </p>
+                <span>{formatCurrency(ordem.valor)}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
