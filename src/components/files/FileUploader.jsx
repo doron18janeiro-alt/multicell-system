@@ -9,8 +9,8 @@ export default function FileUploader({ entidade, entidadeId, onUploaded }) {
   const [loading, setLoading] = useState(false);
 
   async function handleUpload(event) {
-    const arquivos = event.target.files;
-    if (!arquivos || !arquivos.length) return;
+    const arquivos = Array.from(event.target.files || []);
+    if (!arquivos.length) return;
     if (!entidadeId) {
       alert("Salve o registro antes de enviar arquivos.");
       event.target.value = "";
@@ -27,7 +27,7 @@ export default function FileUploader({ entidade, entidadeId, onUploaded }) {
       });
       onUploaded?.(listaAtualizada);
     } catch (error) {
-      alert(error.message || "Erro ao enviar arquivos");
+      alert(error?.message || "Erro ao enviar arquivos.");
     } finally {
       setLoading(false);
       event.target.value = "";

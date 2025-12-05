@@ -51,7 +51,7 @@ export default function FileGallery({
     if (!confirmDelete) return;
     try {
       await deleteFileById(fotoId);
-      fetchFiles();
+      await fetchFiles();
     } catch (error) {
       alert("Erro ao remover arquivo");
     }

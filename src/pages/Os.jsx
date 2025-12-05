@@ -4,7 +4,8 @@ import OsForm from "../components/OsForm";
 import TermoGarantia from "../components/TermoGarantia";
 import FileUploader from "../components/files/FileUploader";
 import FileGallery from "../components/files/FileGallery";
-import { printElementById, shareElementOnWhatsApp } from "../utils/print";
+import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
+import { compartilharWhatsApp } from "../utils/whatsapp";
 import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
 
 const statusDictionary = {
@@ -62,20 +63,127 @@ export default function OsPage() {
   const [feedback, setFeedback] = useState("");
   const [termOs, setTermOs] = useState(null);
   const [galleryKey, setGalleryKey] = useState(0);
+  const [fotosOs, setFotosOs] = useState([]);
+
+  useEffect(() => {
+    setGalleryKey(0);
+    setFotosOs([]);
+  }, [selected?.id]);
 
   const debouncedSearch = useDebounced(search, 350);
 
-  const handlePrintOs = () => {
-    printElementById("os-print-area", "Ordem de Serviço");
-  };
+  function handleImprimirOs() {
+    if (!selected) {
+      alert("Selecione uma OS para imprimir.");
+      return;
+    }
 
-  const handleShareOs = () => {
-    if (!selected) return;
-    shareElementOnWhatsApp(
-      "os-print-area",
-      `Ordem de Serviço - ${selected.cliente_nome || "Multicell"}`
-    );
-  };
+    const dataEntrada = selected.data_entrada
+      ? new Date(selected.data_entrada).toLocaleString("pt-BR")
+      : "-";
+    const valorEstimado = selected.valor_orcado ?? selected.valor_final ?? 0;
+    const statusLabel =
+      statusDictionary[selected.status]?.label || selected.status || "-";
+    const fotoPrincipal = fotosOs[0]?.url_publica || fotosOs[0] || "";
+
+    const html = `
+      <div class="cupom">
+        <h2>ORDEM DE SERVIÇO</h2>
+        <div class="divisor"></div>
+
+        <div class="linha">
+          <span>OS: ${selected.id}</span>
+          <span>Data: ${dataEntrada}</span>
+        </div>
+        <div class="linha">
+          <span>Status:</span>
+          <span>${statusLabel}</span>
+        </div>
+
+        <div class="divisor"></div>
+        <div>
+          <strong>Cliente:</strong> ${selected.cliente_nome || "-"}<br/>
+          <strong>Telefone:</strong> ${
+            selected.cliente_telefone || selected.telefone_cliente || "-"
+          }
+        </div>
+
+        <div class="divisor"></div>
+        <div>
+          <strong>Aparelho:</strong> ${selected.aparelho || "-"}<br/>
+          <strong>IMEI:</strong> ${selected.imei || "-"}
+        </div>
+
+        <div class="divisor"></div>
+        <div>
+          <strong>Serviço:</strong> ${
+            selected.servico || selected.problema_relatado || "-"
+          }<br/>
+          <strong>Valor estimado:</strong> ${formatCurrency(valorEstimado)}
+        </div>
+
+        ${
+          fotoPrincipal
+            ? `
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          <img src="${fotoPrincipal}" class="foto-principal" />
+          <div>Foto do aparelho na entrada</div>
+        </div>
+        `
+            : ""
+        }
+
+        ${
+          selected.observacoes
+            ? `
+        <div class="divisor"></div>
+        <p><strong>Observações:</strong> ${selected.observacoes}</p>
+        `
+            : ""
+        }
+
+        <div class="divisor"></div>
+        <p>
+          Declaro que estou ciente das condições de orçamento, prazo e garantia desta ordem de serviço.
+        </p>
+
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          ________________________________<br/>
+          Assinatura do cliente
+        </div>
+      </div>
+    `;
+
+    imprimirHtmlEmNovaJanela({
+      titulo: "Ordem de Serviço",
+      conteudoHtml: html,
+    });
+  }
+
+  function handleCompartilharOsWhatsapp() {
+    if (!selected) {
+      alert("Selecione uma OS para compartilhar.");
+      return;
+    }
+
+    const telefone =
+      selected.cliente_telefone || selected.telefone_cliente || "";
+    const telefoneLimpo = telefone ? telefone.replace(/\D/g, "") : "";
+    const msg = `Olá, ${selected.cliente_nome || "cliente"}! Sua OS #${
+      selected.id
+    } do aparelho ${selected.aparelho || "-"} está com status ${
+      statusDictionary[selected.status]?.label || selected.status || "-"
+    }. Valor estimado: ${formatCurrency(
+      selected.valor_orcado ?? selected.valor_final ?? 0
+    )}.`;
+
+    compartilharWhatsApp({
+      telefone: telefoneLimpo || undefined,
+      mensagem: msg,
+    });
+  }
 
   useEffect(() => {
     loadOs();
@@ -344,14 +452,14 @@ export default function OsPage() {
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="btn-gold" onClick={handlePrintOs}>
+                  <button className="btn-gold" onClick={handleImprimirOs}>
                     Imprimir OS
                   </button>
                   <button
                     className="btn-gold btn-ghost"
-                    onClick={handleShareOs}
+                    onClick={handleCompartilharOsWhatsapp}
                   >
-                    Compartilhar
+                    Enviar OS no WhatsApp
                   </button>
                   <button
                     className="text-slate-500"
@@ -409,17 +517,30 @@ export default function OsPage() {
                 </dl>
               </div>
 
-              <FileUploader
-                entidade="os"
-                entidadeId={selected.id}
-                onUploaded={() => setGalleryKey((prev) => prev + 1)}
-              />
-              <FileGallery
-                key={`${selected.id}-${galleryKey}`}
-                entidade="os"
-                entidadeId={selected.id}
-                allowDelete
-              />
+              <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
+                <h3 className="text-lg font-semibold text-white">
+                  Fotos da ordem de serviço
+                </h3>
+                <p className="text-sm text-slate-400">
+                  Registre o estado do aparelho antes e depois do serviço para
+                  manter o histórico visual vinculado à OS.
+                </p>
+                <FileUploader
+                  entidade="os"
+                  entidadeId={selected.id}
+                  onUploaded={(lista) => {
+                    setFotosOs(lista || []);
+                    setGalleryKey((prev) => prev + 1);
+                  }}
+                />
+                <FileGallery
+                  key={`${selected.id}-${galleryKey}`}
+                  entidade="os"
+                  entidadeId={selected.id}
+                  allowDelete
+                  onChange={(lista) => setFotosOs(lista || [])}
+                />
+              </div>
             </div>
           )}
 

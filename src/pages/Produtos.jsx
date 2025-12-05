@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import FileUploader from "../components/files/FileUploader";
+import FileGallery from "../components/files/FileGallery";
 import { supabase } from "../supabaseClient";
 
 export default function Produtos() {
@@ -6,6 +8,7 @@ export default function Produtos() {
   const [busca, setBusca] = useState("");
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState("");
+  const [galleryKey, setGalleryKey] = useState(0);
   const [form, setForm] = useState({
     id: null,
     nome: "",
@@ -43,7 +46,10 @@ export default function Produtos() {
       ativo: form.ativo,
     };
     if (form.id) {
-      const { error } = await supabase.from("produtos").update(payload).eq("id", form.id);
+      const { error } = await supabase
+        .from("produtos")
+        .update(payload)
+        .eq("id", form.id);
       if (error) {
         setMensagem("Erro ao atualizar produto");
         return;
@@ -55,7 +61,14 @@ export default function Produtos() {
         return;
       }
     }
-    setForm({ id: null, nome: "", codigo_barras: "", preco_venda: "", ativo: true });
+    setForm({
+      id: null,
+      nome: "",
+      codigo_barras: "",
+      preco_venda: "",
+      ativo: true,
+    });
+    setGalleryKey(0);
     carregar();
   };
 
@@ -67,6 +80,7 @@ export default function Produtos() {
       preco_venda: p.preco_venda ?? "",
       ativo: p.ativo !== false,
     });
+    setGalleryKey(0);
   };
 
   const toggleAtivo = async (p) => {
@@ -85,12 +99,16 @@ export default function Produtos() {
   return (
     <div className="page">
       <h1 className="page-title">Produtos</h1>
-      <p className="page-subtitle">Cadastro de produtos usados no Caixa e Estoque.</p>
+      <p className="page-subtitle">
+        Cadastro de produtos usados no Caixa e Estoque.
+      </p>
       {mensagem && <div className="panel">{mensagem}</div>}
 
       <div className="panel">
         <div className="panel-header">
-          <div className="panel-title">{form.id ? "Editar produto" : "Novo produto"}</div>
+          <div className="panel-title">
+            {form.id ? "Editar produto" : "Novo produto"}
+          </div>
         </div>
         <form className="form-grid-estoque" onSubmit={salvar}>
           <div className="form-field">
@@ -105,7 +123,9 @@ export default function Produtos() {
             <label>Código de barras</label>
             <input
               value={form.codigo_barras}
-              onChange={(e) => setForm({ ...form, codigo_barras: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, codigo_barras: e.target.value })
+              }
               placeholder="Opcional"
             />
           </div>
@@ -116,21 +136,37 @@ export default function Produtos() {
               min="0"
               step="0.01"
               value={form.preco_venda}
-              onChange={(e) => setForm({ ...form, preco_venda: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, preco_venda: e.target.value })
+              }
             />
           </div>
           <div className="form-field">
             <label>Status</label>
             <select
               value={form.ativo ? "1" : "0"}
-              onChange={(e) => setForm({ ...form, ativo: e.target.value === "1" })}
+              onChange={(e) =>
+                setForm({ ...form, ativo: e.target.value === "1" })
+              }
             >
               <option value="1">Ativo</option>
               <option value="0">Inativo</option>
             </select>
           </div>
           <div className="form-actions-right">
-            <button type="button" className="btn btn-secondary" onClick={() => setForm({ id: null, nome: "", codigo_barras: "", preco_venda: "", ativo: true })}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() =>
+                setForm({
+                  id: null,
+                  nome: "",
+                  codigo_barras: "",
+                  preco_venda: "",
+                  ativo: true,
+                })
+              }
+            >
               Limpar
             </button>
             <button type="submit" className="btn btn-primary">
@@ -138,6 +174,32 @@ export default function Produtos() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="panel card-bloco">
+        <div className="panel-header" style={{ marginBottom: 12 }}>
+          <div className="panel-title">Fotos do produto</div>
+        </div>
+        {form.id ? (
+          <>
+            <FileUploader
+              entidade="produto"
+              entidadeId={form.id}
+              onUploaded={() => setGalleryKey((prev) => prev + 1)}
+            />
+            <FileGallery
+              key={`${form.id}-${galleryKey}`}
+              entidade="produto"
+              entidadeId={form.id}
+              allowDelete
+            />
+          </>
+        ) : (
+          <p className="muted">
+            Selecione um produto salvo para registrar e visualizar as fotos no
+            armazenamento.
+          </p>
+        )}
       </div>
 
       <div className="panel">
@@ -160,21 +222,32 @@ export default function Produtos() {
                 <div>
                   <div className="produto-nome">{p.nome}</div>
                   <div className="produto-sub">
-                    Código: {p.codigo_barras || "-"} • R$ {(Number(p.preco_venda) || 0).toFixed(2)}
+                    Código: {p.codigo_barras || "-"} • R${" "}
+                    {(Number(p.preco_venda) || 0).toFixed(2)}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span className="tag">{p.ativo !== false ? "Ativo" : "Inativo"}</span>
-                  <button className="btn btn-secondary btn-sm" onClick={() => editar(p)}>
+                  <span className="tag">
+                    {p.ativo !== false ? "Ativo" : "Inativo"}
+                  </span>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => editar(p)}
+                  >
                     Editar
                   </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => toggleAtivo(p)}>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => toggleAtivo(p)}
+                  >
                     {p.ativo !== false ? "Desativar" : "Ativar"}
                   </button>
                 </div>
               </div>
             ))}
-            {filtrados.length === 0 && <div className="muted">Nenhum produto encontrado.</div>}
+            {filtrados.length === 0 && (
+              <div className="muted">Nenhum produto encontrado.</div>
+            )}
           </div>
         )}
       </div>

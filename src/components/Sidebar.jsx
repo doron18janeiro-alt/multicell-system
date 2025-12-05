@@ -1,55 +1,36 @@
-import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "../services/supabaseClient";
-import Logo from "../assets/logo.png";
-
-const links = [
-  { label: "Dashboard", path: "/dashboard" },
-  { label: "Estoque", path: "/estoque" },
-  { label: "Caixa", path: "/caixa" },
-  { label: "Despesas", path: "/despesas" },
-  { label: "Histórico", path: "/historico" },
-  { label: "Ordens de Serviço", path: "/os" },
-  { label: "Termo de Garantia", path: "/garantia" },
-  { label: "Relatórios", path: "/relatorios" },
-  { label: "Configurações", path: "/config" },
-];
+import { Link, useLocation } from "react-router-dom";
+import { LayoutDashboard, Package, Users, ShoppingCart } from "lucide-react";
 
 export default function Sidebar() {
-  const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login", { replace: true });
-  };
+  const links = [
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/produtos", label: "Produtos", icon: Package },
+    { to: "/clientes", label: "Clientes", icon: Users },
+    { to: "/caixa", label: "Caixa", icon: ShoppingCart },
+  ];
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo-block">
-        <img src={Logo} alt="Logo Multicell" className="sidebar-logo" />
+    <div className="w-64 h-screen bg-gray-900 text-white p-6 space-y-6">
+      <h2 className="text-2xl font-bold mb-6">Sistema App</h2>
 
-        <div className="sidebar-title-wrapper">
-          <h2 className="sidebar-title">PAINEL DE CONTROLE</h2>
-          <p className="sidebar-mini">Multicell System</p>
-        </div>
-      </div>
-      <div className="nav-group">
-        {links.map((item) => {
-          const active = location.pathname.startsWith(item.path);
+      <nav className="space-y-3">
+        {links.map(({ to, label, icon: Icon }) => {
+          const active = location.pathname.startsWith(to);
           return (
-            <button
-              key={item.path}
-              className={`nav-button ${active ? "active" : ""}`}
-              onClick={() => navigate(item.path)}
+            <Link
+              key={to}
+              to={to}
+              className={`flex items-center gap-3 p-3 rounded hover:bg-gray-700 transition ${
+                active ? "bg-gray-800" : ""
+              }`}
             >
-              <span>{item.label}</span>
-            </button>
+              <Icon size={20} /> {label}
+            </Link>
           );
         })}
-        <button className="nav-button" onClick={handleLogout}>
-          <span>Sair</span>
-        </button>
-      </div>
-    </aside>
+      </nav>
+    </div>
   );
 }

@@ -92,24 +92,157 @@
   - created_at (timestamp, default now())
 
 ```sql
-create table if not exists public.vendas (
+create table if not exists public.garantias (
   id uuid primary key default gen_random_uuid(),
-  data timestamptz not null default now(),
-  cliente_nome text,
-  total numeric(12,2) not null,
-  forma_pagamento text not null check (forma_pagamento in ('dinheiro','cartao','pix','outro')),
-  observacoes text,
+  os_id uuid references public.os(id) on delete set null,
+  cliente text not null,
+  telefone text,
+  aparelho text not null,
+  imei text,
+  servico text not null,
+  valor numeric(12,2) default 0,
+  data_entrega date,
+  data_validade date,
+  obs text,
+  fotos text[] not null default '{}',
   created_at timestamptz not null default now()
 );
+```
 
-create table if not exists public.itens_venda (
-  id uuid primary key default gen_random_uuid(),
-  venda_id uuid not null references public.vendas(id) on delete cascade,
-  produto_id text,
-  descricao text not null,
-  quantidade integer not null check (quantidade > 0),
-  preco_unitario numeric(12,2) not null,
-  subtotal numeric(12,2) not null
+## Bloco 1 — Login + RLS
+
+```sql
+create table if not exists public.usuarios (
+  id uuid primary key default uuid_generate_v4(),
+  email text not null unique,
+  senha text not null,
+  nome text,
+  criado_em timestamptz default now()
+);
+
+create table if not exists public.lojas (
+  id uuid primary key default uuid_generate_v4(),
+  nome text not null,
+  criado_em timestamptz default now()
+);
+
+create table if not exists public.relacao_usuario_loja (
+  id uuid primary key default uuid_generate_v4(),
+  usuario_id uuid references public.usuarios(id),
+  loja_id uuid references public.lojas(id)
+);
+
+alter table public.usuarios enable row level security;
+alter table public.lojas enable row level security;
+alter table public.relacao_usuario_loja enable row level security;
+
+create policy if not exists "Apenas o usuário vê seus dados"
+  on public.usuarios
+  for select
+  using (auth.uid() = id);
+```
+
+> Após criar as tabelas rode as instruções de RLS/políticas no SQL Editor do Supabase. As tabelas relacionadas devem validar `loja_id` usando a `relacao_usuario_loja` para saber quais registros o usuário atual pode acessar.
+
+## Bloco 2 — Dashboard / Analytics
+
+```sql
+create table if not exists public.vendas (
+  id uuid primary key default uuid_generate_v4(),
+  loja_id uuid references public.lojas(id),
+  total numeric,
+  metodo_pagamento text,
+  criado_em timestamptz default now()
+);
+
+create table if not exists public.vendas_itens (
+  id uuid primary key default uuid_generate_v4(),
+  venda_id uuid references public.vendas(id),
+  produto_id uuid references public.produtos(id),
+  quantidade integer,
+  preco numeric
+);
+```
+
+Funções esperadas:
+
+- `faturamento_diario` ⇒ retorna `{ total numeric }` do dia atual.
+- `top_produtos` ⇒ retorna `{ produto text, qtd integer }` ordenado pela quantidade.
+
+## Bloco 3 — Estoque avançado
+
+```sql
+create table if not exists public.produtos (
+  id uuid primary key default uuid_generate_v4(),
+  loja_id uuid references public.lojas(id),
+  nome text,
+  preco numeric,
+  estoque integer,
+  minimo integer default 1
+);
+
+create table if not exists public.movimentacoes_estoque (
+  id uuid primary key default uuid_generate_v4(),
+  produto_id uuid references public.produtos(id),
+  tipo text,
+  quantidade integer,
+  usuario_id uuid,
+  criado_em timestamptz default now()
+);
+
+create or replace function public.baixar_estoque(produto uuid, qtd integer)
+returns void
+language plpgsql
+as $$
+begin
+  update public.produtos set estoque = estoque - qtd where id = produto;
+end;
+$$;
+```
+
+## Bloco 4 — Ordem de Serviço
+
+```sql
+create table if not exists public.ordens_servico (
+  id uuid primary key default uuid_generate_v4(),
+  loja_id uuid references public.lojas(id),
+  cliente text,
+  telefone text,
+  aparelho text,
+  problema text,
+  preco numeric,
+  status text,
+  criado_em timestamptz default now()
+);
+```
+
+## Bloco 5 — Caixa avançado / Pagamentos
+
+```sql
+create table if not exists public.pagamentos (
+  id uuid primary key default uuid_generate_v4(),
+  venda_id uuid references public.vendas(id),
+  valor numeric,
+  metodo text,
+  criado_em timestamptz default now()
+);
+
+insert into public.pagamentos (venda_id, valor, metodo)
+values ($1, $2, $3);
+```
+
+### PIX
+
+```js
+import QRCode from "qrcode";
+
+export async function gerarPix(valor) {
+  const payload = `000201...520400005303986540${valor}`;
+  return QRCode.toDataURL(payload);
+}
+```
+
+````
 );
 
 create table if not exists public.os (
@@ -174,3 +307,4 @@ create table if not exists public.garantias (
   created_at timestamptz not null default now()
 );
 ```
+````

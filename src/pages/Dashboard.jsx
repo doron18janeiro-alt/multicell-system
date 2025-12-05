@@ -1,3 +1,4 @@
+/* LEGACY DASHBOARD (mantido para referência)
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "../supabaseClient";
@@ -303,6 +304,213 @@ function CinematicFallback({ message = "Carregando cockpit..." }) {
           <p className="text-lg font-semibold text-white">{message}</p>
         </div>
       </div>
+    </div>
+  );
+}
+*/
+
+import { useEffect, useMemo, useState } from "react";
+import supabase from "../services/supabase";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar, Line } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend
+);
+
+const defaultSerie = [
+  { label: "Seg", total: 0 },
+  { label: "Ter", total: 0 },
+  { label: "Qua", total: 0 },
+  { label: "Qui", total: 0 },
+  { label: "Sex", total: 0 },
+  { label: "Sáb", total: 0 },
+  { label: "Dom", total: 0 },
+];
+
+export default function Dashboard() {
+  const [faturamento, setFaturamento] = useState(0);
+  const [faturamentoSerie, setFaturamentoSerie] = useState(defaultSerie);
+  const [topProdutos, setTopProdutos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    carregar();
+  }, []);
+
+  async function carregar() {
+    setLoading(true);
+    setErro("");
+
+    const [fatResp, topResp] = await Promise.all([
+      supabase.rpc("faturamento_diario"),
+      supabase.rpc("top_produtos"),
+    ]);
+
+    if (fatResp.error) {
+      console.error(fatResp.error);
+      setErro("Não foi possível carregar o faturamento");
+    } else {
+      setFaturamento(fatResp.data?.total || 0);
+      setFaturamentoSerie(fatResp.data?.series || defaultSerie);
+    }
+
+    if (topResp.error) {
+      console.error(topResp.error);
+      setErro((prev) => prev || "Não foi possível carregar os produtos");
+    } else {
+      setTopProdutos(topResp.data || []);
+    }
+
+    setLoading(false);
+  }
+
+  const linhaData = useMemo(() => {
+    const serie = faturamentoSerie?.length ? faturamentoSerie : defaultSerie;
+    return {
+      labels: serie.map((p) => p.label),
+      datasets: [
+        {
+          label: "Faturamento diário",
+          data: serie.map((p) => Number(p.total) || 0),
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,0.2)",
+          fill: true,
+          tension: 0.4,
+        },
+      ],
+    };
+  }, [faturamentoSerie]);
+
+  const barrasData = useMemo(() => {
+    const produtos = topProdutos.slice(0, 5);
+    return {
+      labels: produtos.map((p) => p.produto || p.nome || "Produto"),
+      datasets: [
+        {
+          label: "Quantidade vendida",
+          data: produtos.map((p) => Number(p.qtd || p.quantidade) || 0),
+          backgroundColor: "#10b981",
+        },
+      ],
+    };
+  }, [topProdutos]);
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y ?? ctx.parsed}`,
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value) => `R$ ${value}`,
+        },
+      },
+    },
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Dashboard Multicell</h1>
+          <p className="text-gray-500">Resumo em tempo real de vendas e produtos</p>
+        </div>
+        <button
+          className="text-sm text-blue-600 hover:underline"
+          onClick={carregar}
+          disabled={loading}
+        >
+          {loading ? "Atualizando..." : "Atualizar"}
+        </button>
+      </div>
+
+      {erro && <div className="bg-red-50 text-red-700 p-3 rounded">{erro}</div>}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <ResumoCard titulo="Faturamento Diário" valor={`R$ ${faturamento.toFixed(2)}`} />
+        <ResumoCard titulo="Produtos Monitorados" valor={topProdutos.length} />
+        <ResumoCard titulo="Ticket Médio" valor={`R$ ${(faturamento / Math.max(topProdutos.length, 1)).toFixed(2)}`} />
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Faturamento (7 dias)</h2>
+          </div>
+          <Line data={linhaData} options={chartOptions} height={200} />
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Top Produtos</h2>
+          </div>
+          <Bar
+            data={barrasData}
+            options={{
+              ...chartOptions,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: { callback: (value) => `${value} un.` },
+                },
+              },
+            }}
+            height={200}
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-lg font-semibold mb-4">Produtos mais vendidos</h2>
+        {topProdutos.length === 0 ? (
+          <p className="text-gray-500 text-sm">Nenhum dado disponível.</p>
+        ) : (
+          <ul className="divide-y">
+            {topProdutos.map((p) => (
+              <li
+                key={p.produto || p.nome}
+                className="py-3 flex items-center justify-between text-sm"
+              >
+                <span>{p.produto || p.nome}</span>
+                <span className="font-semibold">{p.qtd || p.quantidade} un.</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ResumoCard({ titulo, valor }) {
+  return (
+    <div className="bg-white rounded-xl shadow p-5">
+      <p className="text-sm text-gray-500">{titulo}</p>
+      <p className="text-2xl font-bold text-gray-800 mt-2">{valor}</p>
     </div>
   );
 }

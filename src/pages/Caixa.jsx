@@ -5,6 +5,8 @@ import {
   listVendas,
 } from "../services/caixaService";
 import { imprimir, modeloCupomVenda, printElementById } from "../utils/print";
+import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
+import { compartilharWhatsApp } from "../utils/whatsapp";
 
 const paymentOptions = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -70,6 +72,9 @@ const defaultCabecalho = () => ({
 
 const PRINTER_IP = import.meta.env.VITE_PRINTER_IP || "192.168.0.150";
 const AUTO_PRINT_VENDA = import.meta.env.VITE_AUTO_PRINT_VENDA === "true";
+const LOJA_NOME = import.meta.env.VITE_LOJA_NOME || "Multicell System";
+const LOJA_CNPJ = import.meta.env.VITE_LOJA_CNPJ || "";
+const LOJA_TELEFONE = import.meta.env.VITE_LOJA_TELEFONE || "";
 
 function montarCupomFromDetalhe(det) {
   if (!det) return null;
@@ -99,6 +104,98 @@ function montarCupomFromForm(cabecalho, itens) {
       itens.reduce((sum, item) => sum + Number(item.subtotal || 0), 0)
     ),
   };
+}
+
+export function gerarHtmlCupomVenda(venda = {}, itens = []) {
+  const dataHora = venda.data
+    ? new Date(venda.data).toLocaleString("pt-BR")
+    : new Date().toLocaleString("pt-BR");
+  const pagamentoLabel =
+    paymentOptions.find((option) => option.value === venda.forma_pagamento)
+      ?.label ||
+    venda.forma_pagamento ||
+    "Pagamento";
+  const itensHtml = itens
+    .map((item) => {
+      const descricao = item.descricao || item.nome || "Item";
+      const quantidade = item.quantidade || item.qtd || 1;
+      const precoUnitario =
+        item.preco_unitario ?? item.preco ?? item.valor_unitario ?? 0;
+      const subtotal =
+        item.subtotal ?? Number((quantidade * precoUnitario).toFixed(2));
+      return `
+        <div class="linha">
+          <span>${descricao}</span>
+          <span>${quantidade} x ${formatCurrency(precoUnitario)}</span>
+        </div>
+        <div class="linha">
+          <span></span>
+          <span>Subtotal: ${formatCurrency(subtotal)}</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="cupom">
+      <h2>${LOJA_NOME.toUpperCase()}</h2>
+      <div class="texto-centro">
+        Operações inteligentes, resultados imediatos.
+      </div>
+
+      <div class="divisor"></div>
+      <div class="linha">
+        <span>Venda: ${venda.id || "-"}</span>
+        <span>Data: ${dataHora}</span>
+      </div>
+      <div class="linha">
+        <span>CNPJ:</span>
+        <span>${LOJA_CNPJ || "-"}</span>
+      </div>
+      <div class="linha">
+        <span>Telefone:</span>
+        <span>${LOJA_TELEFONE || "-"}</span>
+      </div>
+
+      <div class="divisor"></div>
+      <div>
+        <strong>Cliente:</strong> ${
+          venda.cliente_nome || "Cliente não informado"
+        }
+      </div>
+
+      <div class="divisor"></div>
+      ${
+        itensHtml ||
+        '<div class="linha"><span>Nenhum item registrado.</span></div>'
+      }
+
+      <div class="divisor"></div>
+      <div class="linha">
+        <strong>Total</strong>
+        <strong>${formatCurrency(venda.total)}</strong>
+      </div>
+      <div class="linha">
+        <span>Pagamento:</span>
+        <span>${pagamentoLabel}</span>
+      </div>
+
+      ${
+        venda.observacoes
+          ? `
+      <div class="divisor"></div>
+      <div>${venda.observacoes}</div>
+      `
+          : ""
+      }
+
+      <div class="divisor"></div>
+      <div class="texto-centro">
+        Obrigado pela preferência!<br/>
+        Volte sempre.
+      </div>
+    </div>
+  `;
 }
 
 export default function Caixa() {
@@ -137,6 +234,49 @@ export default function Caixa() {
       ? `${window.location.origin}/vendas/${selectedVenda.venda.id}`
       : undefined;
     imprimir(PRINTER_IP, modeloCupomVenda(payload), { qrUrl });
+  };
+
+  const handleImprimirCupomHtml = () => {
+    if (!selectedVenda) {
+      alert("Selecione uma venda para imprimir.");
+      return;
+    }
+    const html = gerarHtmlCupomVenda(selectedVenda.venda, selectedVenda.itens);
+    imprimirHtmlEmNovaJanela({
+      titulo: "Cupom de venda",
+      conteudoHtml: html,
+    });
+  };
+
+  const handleEnviarVendaWhatsapp = () => {
+    if (!selectedVenda) {
+      alert("Selecione uma venda para enviar pelo WhatsApp.");
+      return;
+    }
+
+    const telefone =
+      selectedVenda.venda?.telefone_cliente ||
+      selectedVenda.venda?.cliente_telefone ||
+      "";
+    const telefoneLimpo = telefone ? telefone.replace(/\D/g, "") : "";
+    const pagamentoLabel =
+      paymentOptions.find(
+        (option) => option.value === selectedVenda.venda?.forma_pagamento
+      )?.label || "Pagamento";
+    const msg = `Olá, ${
+      selectedVenda.venda?.cliente_nome || "cliente"
+    }! Segue o comprovante da venda #${
+      selectedVenda.venda?.id || "-"
+    } no valor de ${formatCurrency(
+      selectedVenda.venda?.total
+    )} pago via ${pagamentoLabel} em ${formatDateTime(
+      selectedVenda.venda?.data
+    )}. Obrigado pela preferência!`;
+
+    compartilharWhatsApp({
+      telefone: telefoneLimpo || undefined,
+      mensagem: msg,
+    });
   };
 
   useEffect(() => {
@@ -242,7 +382,7 @@ export default function Caixa() {
         subtotal: item.subtotal,
       })),
     };
-    const { error } = await createVenda(payload);
+    const { data: vendaRegistrada, error } = await createVenda(payload);
     setSaving(false);
     if (error) {
       setFormMessage({
@@ -256,6 +396,26 @@ export default function Caixa() {
       const modelo = montarCupomFromForm(cabecalho, itens);
       imprimir(PRINTER_IP, modeloCupomVenda(modelo));
     }
+    const vendaParaCupom = {
+      id: vendaRegistrada?.venda?.id || "-",
+      data: vendaRegistrada?.venda?.data || payload.cabecalho.data,
+      cliente_nome:
+        vendaRegistrada?.venda?.cliente_nome || payload.cabecalho.cliente_nome,
+      forma_pagamento:
+        vendaRegistrada?.venda?.forma_pagamento ||
+        payload.cabecalho.forma_pagamento,
+      total: vendaRegistrada?.venda?.total ?? totalVenda,
+      observacoes:
+        vendaRegistrada?.venda?.observacoes || payload.cabecalho.observacoes,
+    };
+    const itensParaCupom =
+      (vendaRegistrada?.itens?.length ? vendaRegistrada.itens : null) ||
+      payload.itens;
+    const cupomHtml = gerarHtmlCupomVenda(vendaParaCupom, itensParaCupom);
+    imprimirHtmlEmNovaJanela({
+      titulo: "Cupom de venda",
+      conteudoHtml: cupomHtml,
+    });
     loadVendas();
     setTimeout(() => {
       setDrawerOpen(false);
@@ -429,6 +589,18 @@ export default function Caixa() {
                   </button>
                   <button className="btn-gold" onClick={handlePrintTermico}>
                     Imprimir térmica
+                  </button>
+                  <button
+                    className="btn-gold"
+                    onClick={handleImprimirCupomHtml}
+                  >
+                    Imprimir cupom
+                  </button>
+                  <button
+                    className="btn-gold btn-ghost"
+                    onClick={handleEnviarVendaWhatsapp}
+                  >
+                    Enviar comprovante no WhatsApp
                   </button>
                   <button
                     className="text-slate-500"

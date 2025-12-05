@@ -1,22 +1,6 @@
 import { supabase } from "./supabaseClient";
 
-const ENTITY_FOLDERS = {
-  cliente: "clientes",
-  produto: "produtos",
-  os: "os",
-  garantia: "garantias",
-  despesa: "despesas",
-};
-
-function ensureEntity(entidade) {
-  const folder = ENTITY_FOLDERS[entidade];
-  if (!folder) {
-    throw new Error(`Entidade desconhecida: ${entidade}`);
-  }
-  return folder;
-}
-
-function normalizeFileList(files) {
+function normalizarLista(files) {
   if (!files) return [];
   if (typeof FileList !== "undefined" && files instanceof FileList) {
     return Array.from(files);
@@ -27,13 +11,15 @@ function normalizeFileList(files) {
   return [files];
 }
 
-function buildPath(folder, entidadeId, fileName) {
-  const safeName = fileName
+function montarCaminho(entidade, entidadeId, nomeOriginal = "arquivo") {
+  const nomeSanitizado = nomeOriginal
     .toLowerCase()
     .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9.-]/g, "");
+    .replace(/[^a-z0-9._-]/g, "");
   const timestamp = Date.now();
-  return `${folder}/${entidadeId}/${timestamp}-${safeName}`;
+  return `fotos/${entidade}/${entidadeId}/${timestamp}-${
+    nomeSanitizado || "arquivo"
+  }`;
 }
 
 export async function uploadFilesForEntity({ entidade, entidadeId, files }) {
@@ -41,43 +27,39 @@ export async function uploadFilesForEntity({ entidade, entidadeId, files }) {
     throw new Error("Entidade e entidadeId são obrigatórios para upload");
   }
 
-  const folder = ensureEntity(entidade);
-  const arquivos = normalizeFileList(files).filter(Boolean);
+  const arquivos = normalizarLista(files).filter(Boolean);
   if (!arquivos.length) return [];
 
-  const registrosInseridos = [];
+  const registros = [];
 
-  for (const file of arquivos) {
-    const caminho = buildPath(folder, entidadeId, file.name || "arquivo");
+  for (const arquivo of arquivos) {
+    const caminho = montarCaminho(entidade, entidadeId, arquivo.name);
 
     const { error: uploadError } = await supabase.storage
       .from("fotos")
-      .upload(caminho, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      .upload(caminho, arquivo, { upsert: false });
 
     if (uploadError) {
       throw uploadError;
     }
 
-    const { data: publicURL } = supabase.storage
+    const { data: publicData } = supabase.storage
       .from("fotos")
       .getPublicUrl(caminho);
 
     const registro = {
       entidade,
       entidade_id: entidadeId,
-      bucket: "fotos",
-      pasta: folder,
+      nome_arquivo: arquivo.name || "arquivo",
       caminho,
-      url_publica: publicURL?.publicUrl,
-      nome_arquivo: file.name || null,
-      tamanho_bytes: file.size ?? null,
+      url_publica: publicData?.publicUrl || null,
+      criado_em: new Date().toISOString(),
+      tamanho: arquivo.size ?? null,
+      tipo: arquivo.type || "",
     };
 
     const { data, error } = await supabase
-      .from("fotos_registros")
+      .from("storage_files")
       .insert(registro)
       .select()
       .single();
@@ -86,18 +68,20 @@ export async function uploadFilesForEntity({ entidade, entidadeId, files }) {
       throw error;
     }
 
-    registrosInseridos.push(data);
+    registros.push(data);
   }
 
-  return registrosInseridos;
+  return registros;
 }
 
 export async function listFilesForEntity({ entidade, entidadeId }) {
   if (!entidade || !entidadeId) return [];
 
   const { data, error } = await supabase
-    .from("fotos_registros")
-    .select("id, url_publica, caminho, criado_em, nome_arquivo")
+    .from("storage_files")
+    .select(
+      "id, entidade, entidade_id, nome_arquivo, caminho, url_publica, criado_em, tamanho, tipo"
+    )
     .eq("entidade", entidade)
     .eq("entidade_id", entidadeId)
     .order("criado_em", { ascending: false });
@@ -109,13 +93,13 @@ export async function listFilesForEntity({ entidade, entidadeId }) {
   return data || [];
 }
 
-export async function deleteFileById(fotoId) {
-  if (!fotoId) return null;
+export async function deleteFileById(id) {
+  if (!id) return null;
 
   const { data: registro, error } = await supabase
-    .from("fotos_registros")
+    .from("storage_files")
     .select("*")
-    .eq("id", fotoId)
+    .eq("id", id)
     .single();
 
   if (error) {
@@ -133,9 +117,9 @@ export async function deleteFileById(fotoId) {
   }
 
   const { error: deleteError } = await supabase
-    .from("fotos_registros")
+    .from("storage_files")
     .delete()
-    .eq("id", fotoId);
+    .eq("id", id);
 
   if (deleteError) {
     throw deleteError;

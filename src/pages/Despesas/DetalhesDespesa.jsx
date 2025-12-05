@@ -14,6 +14,14 @@ export default function DetalhesDespesa() {
   const [galleryKey, setGalleryKey] = useState(0);
 
   useEffect(() => {
+    if (!despesa?.id) {
+      setGalleryKey(0);
+      return;
+    }
+    setGalleryKey((prev) => prev + 1);
+  }, [despesa?.id]);
+
+  useEffect(() => {
     carregarDespesa();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);

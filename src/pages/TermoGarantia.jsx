@@ -8,7 +8,8 @@ import {
 import FileUploader from "../components/files/FileUploader";
 import FileGallery from "../components/files/FileGallery";
 import { supabase } from "../services/supabaseClient";
-import { printElementById, shareElementOnWhatsApp } from "../utils/print";
+import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
+import { compartilharWhatsApp } from "../utils/whatsapp";
 import "../styles/garantia.css";
 
 const TERMOS_GARANTIA = [
@@ -93,8 +94,17 @@ export default function TermoGarantia() {
   const [loading, setLoading] = useState(!garantiaState);
   const [erro, setErro] = useState(null);
   const [sincronizando, setSincronizando] = useState(false);
-  const [fotosRegistro, setFotosRegistro] = useState([]);
+  const [fotosGarantia, setFotosGarantia] = useState([]);
   const [galleryKey, setGalleryKey] = useState(0);
+
+  useEffect(() => {
+    if (!garantia?.id) {
+      setFotosGarantia([]);
+      setGalleryKey(0);
+      return;
+    }
+    setGalleryKey((prev) => prev + 1);
+  }, [garantia?.id]);
 
   const carregarGarantia = useCallback(async () => {
     if (!garantiaId) return null;
@@ -149,7 +159,35 @@ export default function TermoGarantia() {
     };
   }, [garantiaId, garantiaState, carregarGarantia]);
 
-  const fotos = fotosRegistro;
+  const fotos = (fotosGarantia || []).map((item) => item?.url_publica || item);
+  const telefoneClienteRaw = getFirstValue(garantia, [
+    "telefone",
+    "cliente_telefone",
+    "contato",
+  ]);
+  const telefoneCliente = telefoneClienteRaw
+    ? telefoneClienteRaw.replace(/\D/g, "")
+    : "";
+  const dadosEmpresa = {
+    nome: garantia?.empresa_nome || garantia?.loja_nome || "Multicell System",
+    cnpj: garantia?.empresa_cnpj || garantia?.loja_cnpj || "",
+    telefone: garantia?.empresa_telefone || garantia?.loja_telefone || "",
+  };
+  const dadosGarantia = {
+    codigo: garantia?.codigo || garantia?.protocolo || garantia?.id || "-",
+    cliente:
+      getFirstValue(garantia, ["cliente", "cliente_nome", "nome_cliente"]) ||
+      "-",
+    aparelho:
+      getFirstValue(garantia, ["aparelho", "device", "equipamento"]) || "-",
+    imei: getFirstValue(garantia, ["imei", "serial", "numero_serie"]) || "-",
+    servico:
+      getFirstValue(garantia, ["servico", "descricao", "servico_executado"]) ||
+      "-",
+    validade_formatada: formatarData(
+      getFirstValue(garantia, ["data_validade", "validade", "garantia_fim"])
+    ),
+  };
   const dataEmissao =
     garantia?.data_entrega || garantia?.created_at || new Date().toISOString();
   const dataEmissaoFormatada = formatarData(dataEmissao);
@@ -201,18 +239,82 @@ export default function TermoGarantia() {
     }
   };
 
-  const handlePrintGarantia = () => {
-    if (!garantia) return;
-    printElementById(PRINT_ROOT_ID);
-  };
+  const handleVoltar = () => navigate(-1);
 
-  const handleShareWhatsapp = () => {
-    if (!garantia) return;
-    shareElementOnWhatsApp(
-      PRINT_ROOT_ID,
-      "Certificado de garantia Multicell System"
-    );
-  };
+  function handleImprimirGarantia() {
+    if (!garantia) {
+      alert("Selecione uma garantia para imprimir.");
+      return;
+    }
+
+    const fotoPrincipal = fotos[0];
+    const html = `
+      <div class="cupom">
+        <h2>CERTIFICADO DE GARANTIA MULTICELL</h2>
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          <strong>${dadosEmpresa.nome}</strong><br/>
+          CNPJ: ${dadosEmpresa.cnpj || "-"}<br/>
+          Telefone: ${dadosEmpresa.telefone || "-"}
+        </div>
+
+        <div class="divisor"></div>
+        <div>
+          <strong>Código:</strong> ${dadosGarantia.codigo}<br/>
+          <strong>Cliente:</strong> ${dadosGarantia.cliente}<br/>
+          <strong>Aparelho:</strong> ${dadosGarantia.aparelho}<br/>
+          <strong>IMEI:</strong> ${dadosGarantia.imei}<br/>
+          <strong>Serviço executado:</strong> ${dadosGarantia.servico}<br/>
+          <strong>Validade:</strong> ${dadosGarantia.validade_formatada}
+        </div>
+
+        ${
+          fotoPrincipal
+            ? `
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          <img src="${fotoPrincipal}" class="foto-principal" />
+          <div>Foto ilustrativa do aparelho / serviço</div>
+        </div>
+        `
+            : ""
+        }
+
+        <div class="divisor"></div>
+        <p>
+          Declaro que o serviço foi executado nas condições descritas acima, estando o cliente ciente das políticas de garantia da Multicell System.
+        </p>
+
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          ________________________________<br/>
+          Assinatura do cliente
+        </div>
+      </div>
+    `;
+
+    imprimirHtmlEmNovaJanela({
+      titulo: "Certificado de Garantia",
+      conteudoHtml: html,
+    });
+  }
+
+  function handleEnviarGarantiaWhatsapp() {
+    if (!garantia) {
+      alert("Selecione uma garantia para compartilhar.");
+      return;
+    }
+
+    const msg = `Olá, ${
+      dadosGarantia.cliente || "cliente"
+    }! Segue o resumo da sua garantia Multicell. OS: ${
+      dadosGarantia.codigo
+    }, aparelho: ${dadosGarantia.aparelho}.`;
+    compartilharWhatsApp({
+      telefone: telefoneCliente || undefined,
+      mensagem: msg,
+    });
+  }
 
   return (
     <div className="garantia-container">
@@ -235,14 +337,14 @@ export default function TermoGarantia() {
           <button
             type="button"
             className="btn-gold"
-            onClick={handlePrintGarantia}
+            onClick={handleImprimirGarantia}
           >
-            Imprimir certificado
+            Imprimir garantia
           </button>
           <button
             type="button"
             className="btn-gold btn-ghost"
-            onClick={handleShareWhatsapp}
+            onClick={handleEnviarGarantiaWhatsapp}
           >
             Enviar por WhatsApp
           </button>
@@ -297,7 +399,7 @@ export default function TermoGarantia() {
                 entidade="garantia"
                 entidadeId={garantia.id}
                 onUploaded={(lista) => {
-                  setFotosRegistro(lista);
+                  setFotosGarantia(lista || []);
                   setGalleryKey((prev) => prev + 1);
                 }}
               />
@@ -306,7 +408,7 @@ export default function TermoGarantia() {
                 entidade="garantia"
                 entidadeId={garantia.id}
                 allowDelete
-                onChange={setFotosRegistro}
+                onChange={(lista) => setFotosGarantia(lista || [])}
               />
             </div>
           </div>
