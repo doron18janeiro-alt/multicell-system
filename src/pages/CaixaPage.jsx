@@ -1,3 +1,9 @@
+export { default } from "./Caixa";
+
+/*
+Tela antiga mantida apenas para referência. Utilize src/pages/Caixa.jsx
+para qualquer ajuste funcional.
+
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabaseClient";
 import { Plus, Trash2 } from "lucide-react";
@@ -89,3 +95,4 @@ export default function CaixaPage() {
     </div>
   );
 }
+*/

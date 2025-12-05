@@ -1,36 +1,53 @@
-import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, Users, ShoppingCart } from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+
+const navItems = [
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/produtos", label: "Produtos" },
+  { to: "/clientes", label: "Clientes" },
+  { to: "/vendas", label: "Vendas" },
+  { to: "/os", label: "Ordens de Serviço" },
+  { to: "/caixa", label: "Caixa" },
+];
 
 export default function Sidebar() {
-  const location = useLocation();
-
-  const links = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/produtos", label: "Produtos", icon: Package },
-    { to: "/clientes", label: "Clientes", icon: Users },
-    { to: "/caixa", label: "Caixa", icon: ShoppingCart },
-  ];
+  const { usuario, signOut } = useAuth();
 
   return (
-    <div className="w-64 h-screen bg-gray-900 text-white p-6 space-y-6">
-      <h2 className="text-2xl font-bold mb-6">Sistema App</h2>
+    <aside className="w-64 h-screen bg-gray-900 text-white p-5 flex flex-col gap-6">
+      <div>
+        <p className="text-xs uppercase tracking-[0.6em] text-gray-500">
+          Multicell
+        </p>
+        <h2 className="text-2xl font-bold">Cockpit</h2>
+        {usuario?.nome && (
+          <p className="text-sm text-gray-400 mt-1">{usuario.nome}</p>
+        )}
+      </div>
 
-      <nav className="space-y-3">
-        {links.map(({ to, label, icon: Icon }) => {
-          const active = location.pathname.startsWith(to);
-          return (
-            <Link
-              key={to}
-              to={to}
-              className={`flex items-center gap-3 p-3 rounded hover:bg-gray-700 transition ${
-                active ? "bg-gray-800" : ""
-              }`}
-            >
-              <Icon size={20} /> {label}
-            </Link>
-          );
-        })}
+      <nav className="flex flex-col gap-1 text-sm font-medium">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `rounded-lg px-3 py-2 transition hover:bg-white/10 ${
+                isActive ? "bg-white/10 text-white" : "text-gray-300"
+              }`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
       </nav>
-    </div>
+
+      <button
+        type="button"
+        onClick={signOut}
+        className="mt-auto rounded-lg border border-white/20 px-3 py-2 text-sm text-gray-300 transition hover:bg-white/10"
+      >
+        Sair
+      </button>
+    </aside>
   );
 }

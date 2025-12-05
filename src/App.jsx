@@ -1,27 +1,86 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { AuthProvider } from "./contexts/AuthContext";
+import PrivateRoute from "./routes/PrivateRoute";
+import AppLayout from "./layout/AppLayout";
 
-import ProdutosPage from "./pages/ProdutosPage";
-import ClientesPage from "./pages/ClientesPage";
-import CaixaPage from "./pages/CaixaPage";
-import Dashboard from "./pages/Dashboard";
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Produtos = lazy(() => import("./pages/Produtos"));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const Os = lazy(() => import("./pages/Os"));
+const Caixa = lazy(() => import("./pages/Caixa"));
+const Estoque = lazy(() => import("./pages/Estoque"));
+const Vendas = lazy(() => import("./pages/Vendas"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const Config = lazy(() => import("./pages/Config"));
+const ConfigUsuarios = lazy(() => import("./pages/ConfigUsuarios"));
+const TermoGarantia = lazy(() => import("./pages/TermoGarantia"));
+const Historico = lazy(() => import("./pages/Historico"));
+const DespesasList = lazy(() => import("./pages/Despesas/Despesas"));
+const NovaDespesa = lazy(() => import("./pages/Despesas/NovaDespesa"));
+const DetalhesDespesa = lazy(() => import("./pages/Despesas/DetalhesDespesa"));
+
+function CinematicFallback() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#050114] text-slate-100">
+      <div className="relative px-10 py-8 rounded-3xl border border-slate-800/60 bg-slate-900/40 backdrop-blur-2xl shadow-[0_30px_80px_rgba(3,7,18,0.9)]">
+        <div
+          className="absolute inset-3 rounded-2xl border border-slate-700/40 animate-pulse"
+          aria-hidden
+        />
+        <div className="relative text-center space-y-3">
+          <p className="text-xs uppercase tracking-[0.5em] text-slate-400">
+            Carregando cockpit
+          </p>
+          <p className="text-lg font-semibold text-white">
+            Preparando módulos avançados…
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div className="flex">
-        <Sidebar />
-
-        <main className="flex-1 p-6">
+    <AuthProvider>
+      <BrowserRouter>
+        <Suspense fallback={<CinematicFallback />}>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/produtos" element={<ProdutosPage />} />
-            <Route path="/clientes" element={<ClientesPage />} />
-            <Route path="/caixa" element={<CaixaPage />} />
+            <Route path="/login" element={<Login />} />
+
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <AppLayout />
+                </PrivateRoute>
+              }
+            >
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/produtos" element={<Produtos />} />
+              <Route path="/clientes" element={<Clientes />} />
+              <Route path="/os" element={<Os />} />
+              <Route path="/caixa" element={<Caixa />} />
+              <Route path="/estoque" element={<Estoque />} />
+              <Route path="/vendas" element={<Vendas />} />
+              <Route path="/relatorios" element={<Relatorios />} />
+              <Route path="/config" element={<Config />} />
+              <Route path="/config/usuarios" element={<ConfigUsuarios />} />
+              <Route path="/garantia" element={<TermoGarantia />} />
+              <Route path="/garantia/:id" element={<TermoGarantia />} />
+              <Route path="/historico" element={<Historico />} />
+              <Route path="/despesas" element={<DespesasList />} />
+              <Route path="/despesas/nova" element={<NovaDespesa />} />
+              <Route path="/despesas/:id" element={<DetalhesDespesa />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+        </Suspense>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

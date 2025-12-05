@@ -1,256 +1,207 @@
-import { useEffect, useState } from "react";
-import FileUploader from "../components/files/FileUploader";
-import FileGallery from "../components/files/FileGallery";
-import { supabase } from "../supabaseClient";
+import { useMemo, useState } from "react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import useProdutos from "../hooks/useProdutos";
+import ProdutosModal from "../components/ProdutosModal";
+import { removerProduto } from "../services/produtosService";
+import { money } from "../utils/money";
 
 export default function Produtos() {
-  const [produtos, setProdutos] = useState([]);
+  const { proprietarioId, loading: authLoading } = useAuth();
+  const { produtos, carregando, erro, carregarProdutos, criar, atualizar } =
+    useProdutos(proprietarioId);
+
   const [busca, setBusca] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [mensagem, setMensagem] = useState("");
-  const [galleryKey, setGalleryKey] = useState(0);
-  const [form, setForm] = useState({
-    id: null,
-    nome: "",
-    codigo_barras: "",
-    preco_venda: "",
-    ativo: true,
-  });
+  const [modalAberto, setModalAberto] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
+  const [feedback, setFeedback] = useState("");
+  const [excluindoId, setExcluindoId] = useState(null);
 
-  useEffect(() => {
-    carregar();
-  }, []);
+  const produtosFiltrados = useMemo(() => {
+    if (!busca.trim()) return produtos;
+    const termo = busca.toLowerCase();
+    return produtos.filter((produto) => {
+      return (
+        produto.nome?.toLowerCase().includes(termo) ||
+        produto.codigo?.toLowerCase().includes(termo) ||
+        produto.categoria?.toLowerCase().includes(termo)
+      );
+    });
+  }, [busca, produtos]);
 
-  const carregar = async () => {
-    setLoading(true);
-    setMensagem("");
-    const { data, error } = await supabase
-      .from("produtos")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) setMensagem("Erro ao carregar produtos");
-    setProdutos(data || []);
-    setLoading(false);
-  };
+  function abrirNovo() {
+    setProdutoSelecionado(null);
+    setModalAberto(true);
+  }
 
-  const salvar = async (e) => {
-    e.preventDefault();
-    if (!form.nome.trim()) {
-      setMensagem("Informe o nome");
-      return;
+  function editar(produto) {
+    setProdutoSelecionado(produto);
+    setModalAberto(true);
+  }
+
+  async function excluir(produto) {
+    if (!proprietarioId) return;
+    if (!window.confirm(`Excluir o produto "${produto.nome}"?`)) return;
+
+    setExcluindoId(produto.id);
+    setFeedback("");
+    try {
+      const { error } = await removerProduto(produto.id, proprietarioId);
+      if (error) throw error;
+      await carregarProdutos();
+    } catch (error) {
+      console.error("[Produtos] excluir", error);
+      setFeedback(
+        error?.message || "Não foi possível excluir o produto. Tente novamente."
+      );
+    } finally {
+      setExcluindoId(null);
     }
-    const payload = {
-      nome: form.nome.trim(),
-      codigo_barras: form.codigo_barras.trim() || null,
-      preco_venda: Number(form.preco_venda) || 0,
-      ativo: form.ativo,
-    };
-    if (form.id) {
-      const { error } = await supabase
-        .from("produtos")
-        .update(payload)
-        .eq("id", form.id);
-      if (error) {
-        setMensagem("Erro ao atualizar produto");
-        return;
-      }
+  }
+
+  async function salvarProduto(dados) {
+    if (produtoSelecionado) {
+      await atualizar(produtoSelecionado.id, dados);
     } else {
-      const { error } = await supabase.from("produtos").insert(payload);
-      if (error) {
-        setMensagem("Erro ao criar produto");
-        return;
-      }
+      await criar(dados);
     }
-    setForm({
-      id: null,
-      nome: "",
-      codigo_barras: "",
-      preco_venda: "",
-      ativo: true,
-    });
-    setGalleryKey(0);
-    carregar();
-  };
+  }
 
-  const editar = (p) => {
-    setForm({
-      id: p.id,
-      nome: p.nome || "",
-      codigo_barras: p.codigo_barras || "",
-      preco_venda: p.preco_venda ?? "",
-      ativo: p.ativo !== false,
-    });
-    setGalleryKey(0);
-  };
-
-  const toggleAtivo = async (p) => {
-    await supabase.from("produtos").update({ ativo: !p.ativo }).eq("id", p.id);
-    carregar();
-  };
-
-  const filtrados = produtos.filter((p) => {
-    const term = busca.toLowerCase();
+  if (authLoading) {
     return (
-      p.nome?.toLowerCase().includes(term) ||
-      (p.codigo_barras || "").toLowerCase().includes(term)
+      <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
+        Validando sessão...
+      </div>
     );
-  });
+  }
+
+  if (!proprietarioId) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
+        Faça login para gerenciar seus produtos.
+      </div>
+    );
+  }
 
   return (
-    <div className="page">
-      <h1 className="page-title">Produtos</h1>
-      <p className="page-subtitle">
-        Cadastro de produtos usados no Caixa e Estoque.
-      </p>
-      {mensagem && <div className="panel">{mensagem}</div>}
-
-      <div className="panel">
-        <div className="panel-header">
-          <div className="panel-title">
-            {form.id ? "Editar produto" : "Novo produto"}
-          </div>
-        </div>
-        <form className="form-grid-estoque" onSubmit={salvar}>
-          <div className="form-field">
-            <label>Nome</label>
-            <input
-              value={form.nome}
-              onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              placeholder="Nome do produto"
-            />
-          </div>
-          <div className="form-field">
-            <label>Código de barras</label>
-            <input
-              value={form.codigo_barras}
-              onChange={(e) =>
-                setForm({ ...form, codigo_barras: e.target.value })
-              }
-              placeholder="Opcional"
-            />
-          </div>
-          <div className="form-field">
-            <label>Preço venda (R$)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.preco_venda}
-              onChange={(e) =>
-                setForm({ ...form, preco_venda: e.target.value })
-              }
-            />
-          </div>
-          <div className="form-field">
-            <label>Status</label>
-            <select
-              value={form.ativo ? "1" : "0"}
-              onChange={(e) =>
-                setForm({ ...form, ativo: e.target.value === "1" })
-              }
-            >
-              <option value="1">Ativo</option>
-              <option value="0">Inativo</option>
-            </select>
-          </div>
-          <div className="form-actions-right">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() =>
-                setForm({
-                  id: null,
-                  nome: "",
-                  codigo_barras: "",
-                  preco_venda: "",
-                  ativo: true,
-                })
-              }
-            >
-              Limpar
-            </button>
-            <button type="submit" className="btn btn-primary">
-              {form.id ? "Salvar edição" : "Criar produto"}
-            </button>
-          </div>
-        </form>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm uppercase tracking-[0.4em] text-gray-500">
+          Catálogo
+        </p>
+        <h1 className="text-3xl font-bold text-gray-900">Produtos</h1>
+        <p className="text-gray-500">
+          Gerencie itens, preços e estoque com integração direta ao Supabase.
+        </p>
       </div>
 
-      <div className="panel card-bloco">
-        <div className="panel-header" style={{ marginBottom: 12 }}>
-          <div className="panel-title">Fotos do produto</div>
+      {erro && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {erro}
         </div>
-        {form.id ? (
-          <>
-            <FileUploader
-              entidade="produto"
-              entidadeId={form.id}
-              onUploaded={() => setGalleryKey((prev) => prev + 1)}
-            />
-            <FileGallery
-              key={`${form.id}-${galleryKey}`}
-              entidade="produto"
-              entidadeId={form.id}
-              allowDelete
-            />
-          </>
-        ) : (
-          <p className="muted">
-            Selecione um produto salvo para registrar e visualizar as fotos no
-            armazenamento.
-          </p>
-        )}
-      </div>
+      )}
 
-      <div className="panel">
-        <div className="panel-header">
-          <div className="panel-title">Lista de produtos</div>
+      {feedback && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {feedback}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
           <input
-            className="input"
-            placeholder="Buscar por nome ou código"
+            type="text"
+            placeholder="Buscar por nome, código ou categoria"
+            className="pl-10 pr-3 py-2 w-full border rounded-md"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            style={{ maxWidth: 260 }}
           />
         </div>
-        {loading ? (
-          <div className="muted">Carregando...</div>
-        ) : (
-          <div className="lista-produtos">
-            {filtrados.map((p) => (
-              <div key={p.id} className="produto-item">
-                <div>
-                  <div className="produto-nome">{p.nome}</div>
-                  <div className="produto-sub">
-                    Código: {p.codigo_barras || "-"} • R${" "}
-                    {(Number(p.preco_venda) || 0).toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <span className="tag">
-                    {p.ativo !== false ? "Ativo" : "Inativo"}
-                  </span>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => editar(p)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => toggleAtivo(p)}
-                  >
-                    {p.ativo !== false ? "Desativar" : "Ativar"}
-                  </button>
-                </div>
-              </div>
-            ))}
-            {filtrados.length === 0 && (
-              <div className="muted">Nenhum produto encontrado.</div>
-            )}
-          </div>
-        )}
+
+        <button
+          onClick={abrirNovo}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2"
+        >
+          <Plus size={18} /> Novo
+        </button>
       </div>
+
+      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-100 text-left text-sm text-gray-500">
+            <tr>
+              <th className="p-3">Nome</th>
+              <th className="p-3">Categoria</th>
+              <th className="p-3">Preço</th>
+              <th className="p-3">Estoque</th>
+              <th className="p-3 w-32">Ações</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {produtosFiltrados.map((p) => (
+              <tr key={p.id} className="border-t">
+                <td className="p-3">
+                  <p className="font-semibold text-gray-900">{p.nome}</p>
+                  <p className="text-xs text-gray-500">{p.codigo || "—"}</p>
+                </td>
+                <td className="p-3 text-sm text-gray-600">
+                  {p.categoria || "—"}
+                </td>
+                <td className="p-3 text-sm text-gray-800">
+                  {money(p.preco_venda || p.preco || 0)}
+                </td>
+                <td className="p-3 text-sm text-gray-800">
+                  {p.quantidade ?? p.estoque ?? 0}
+                </td>
+                <td className="p-3 flex gap-3">
+                  <button onClick={() => editar(p)} title="Editar">
+                    <Pencil size={18} className="text-blue-600" />
+                  </button>
+
+                  <button
+                    onClick={() => excluir(p)}
+                    title="Excluir"
+                    disabled={excluindoId === p.id}
+                  >
+                    <Trash2
+                      size={18}
+                      className={
+                        excluindoId === p.id ? "text-gray-400" : "text-red-600"
+                      }
+                    />
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {!carregando && produtosFiltrados.length === 0 && (
+              <tr>
+                <td colSpan={5} className="p-4 text-center text-gray-500">
+                  Nenhum produto encontrado.
+                </td>
+              </tr>
+            )}
+
+            {carregando && (
+              <tr>
+                <td colSpan={5} className="p-4 text-center text-gray-500">
+                  Carregando produtos...
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {modalAberto && (
+        <ProdutosModal
+          fechar={() => setModalAberto(false)}
+          produto={produtoSelecionado}
+          onSubmit={salvarProduto}
+        />
+      )}
     </div>
   );
 }

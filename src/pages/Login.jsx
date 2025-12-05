@@ -1,33 +1,43 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../services/supabase";
+import { useAuth } from "../contexts/AuthContext";
 import Logo from "../assets/logo.png";
 import "./Login.css";
 
-function Login() {
-  const nav = useNavigate();
+export default function Login() {
+  const navigate = useNavigate();
+  const { login, proprietarioId, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [mensagemErro, setMensagemErro] = useState("");
+  const [submetendo, setSubmetendo] = useState(false);
+
+  useEffect(() => {
+    if (proprietarioId) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate, proprietarioId]);
 
   async function handleLogin(event) {
     event.preventDefault();
-    if (loading) return;
+    if (submetendo || loading) return;
 
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    });
+    setMensagemErro("");
+    setSubmetendo(true);
 
-    setLoading(false);
-
-    if (error) {
-      alert("Credenciais inválidas");
-      return;
+    try {
+      await login(email.trim(), senha);
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      console.error("[Login] Falha ao autenticar", error);
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Não foi possível autenticar. Verifique suas credenciais.";
+      setMensagemErro(message);
+    } finally {
+      setSubmetendo(false);
     }
-
-    nav("/");
   }
 
   return (
@@ -40,6 +50,8 @@ function Login() {
           Operações inteligentes, resultados imediatos.
         </p>
 
+        {mensagemErro && <div className="login-alert">{mensagemErro}</div>}
+
         <form className="login-form" onSubmit={handleLogin}>
           <input
             value={email}
@@ -47,6 +59,7 @@ function Login() {
             type="email"
             placeholder="Seu e-mail"
             className="login-input"
+            autoComplete="username"
             required
           />
 
@@ -56,16 +69,25 @@ function Login() {
             type="password"
             placeholder="Sua senha"
             className="login-input"
+            autoComplete="current-password"
             required
           />
 
-          <button type="submit" className="login-button" disabled={loading}>
-            Entrar
+          <button
+            type="submit"
+            className="login-button"
+            disabled={submetendo || loading}
+          >
+            {submetendo || loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+
+        <p className="login-hint">
+          Utilizamos o Supabase Auth para validar credenciais. Em ambientes de
+          teste sem hash, troque esta chamada por uma checagem simples na tabela
+          "proprietarios" e documente o uso de senha em texto plano.
+        </p>
       </div>
     </div>
   );
 }
-
-export default Login;

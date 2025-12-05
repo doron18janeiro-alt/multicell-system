@@ -1,13 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProdutoForm from "../components/ProdutoForm";
-import {
-  createProduto,
-  inativarProduto,
-  listProdutos,
-  updateProduto,
-} from "../services/estoqueService";
-import NovoProduto from "./Produtos/NovoProduto";
+import { useAuth } from "../contexts/AuthContext";
+import useEstoque from "../hooks/useEstoque";
 
 const formatCurrency = (value) => {
   const numeric = Number(value);
@@ -32,61 +27,39 @@ function useDebounced(value, delay = 400) {
 
 export default function Estoque() {
   const navigate = useNavigate();
+  const { proprietarioId, loading: authLoading } = useAuth();
+  const {
+    produtos,
+    carregando,
+    erro,
+    resumo,
+    categoriaOptions,
+    carregarProdutos,
+    criar,
+    atualizar,
+    inativar,
+  } = useEstoque(proprietarioId);
   const [busca, setBusca] = useState("");
   const debouncedBusca = useDebounced(busca);
   const [categoria, setCategoria] = useState("todos");
-  const [produtos, setProdutos] = useState([]);
-  const [categoriaOptions, setCategoriaOptions] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadProdutos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedBusca, categoria]);
+    if (!proprietarioId) return;
+    carregarProdutos({
+      busca: debouncedBusca,
+      categoria: categoria === "todos" ? undefined : categoria,
+    });
+  }, [carregarProdutos, categoria, debouncedBusca, proprietarioId]);
 
   const categorias = useMemo(() => {
     const unique = Array.from(new Set(categoriaOptions.filter(Boolean)));
     unique.sort();
     return ["todos", ...unique];
   }, [categoriaOptions]);
-
-  const resumo = useMemo(() => {
-    const totalSkus = produtos.length;
-    const totalPecas = produtos.reduce(
-      (sum, item) => sum + (Number(item.quantidade) || 0),
-      0
-    );
-    const estoqueCritico = produtos.filter(
-      (item) => Number(item.quantidade) < 5
-    ).length;
-    return { totalSkus, totalPecas, estoqueCritico };
-  }, [produtos]);
-
-  async function loadProdutos() {
-    setLoading(true);
-    setFeedback("");
-    const { data, error } = await listProdutos({
-      busca: debouncedBusca,
-      categoria,
-    });
-    if (error) {
-      setFeedback(error.message || "Não foi possível carregar os produtos.");
-    }
-    const safeData = data || [];
-    setProdutos(safeData);
-    setCategoriaOptions((prev) => {
-      const merged = new Set(prev);
-      safeData.forEach((item) => {
-        if (item.categoria) merged.add(item.categoria);
-      });
-      return Array.from(merged);
-    });
-    setLoading(false);
-  }
 
   function handleNewProduto() {
     setEditing(null);
@@ -98,25 +71,25 @@ export default function Estoque() {
     setDrawerOpen(true);
   }
 
-  function handleProdutoCriado() {
-    loadProdutos();
-  }
-
   async function handleSaveProduto(values) {
     setSaving(true);
     setFeedback("");
-    const action = editing
-      ? updateProduto(editing.id, values)
-      : createProduto(values);
-    const { error } = await action;
-    setSaving(false);
-    if (error) {
-      setFeedback(error.message || "Não foi possível salvar o produto.");
-      return;
+    try {
+      if (editing) {
+        await atualizar(editing.id, values);
+      } else {
+        await criar(values);
+      }
+      setDrawerOpen(false);
+      setEditing(null);
+    } catch (error) {
+      console.error("[Estoque] salvar", error);
+      setFeedback(
+        error?.message || "Não foi possível salvar o produto. Tente novamente."
+      );
+    } finally {
+      setSaving(false);
     }
-    setDrawerOpen(false);
-    setEditing(null);
-    loadProdutos();
   }
 
   async function handleInativarProduto(produto) {
@@ -124,12 +97,32 @@ export default function Estoque() {
       `Deseja realmente inativar o produto "${produto.nome}"?`
     );
     if (!confirmation) return;
-    const { error } = await inativarProduto(produto.id);
-    if (error) {
-      alert(error.message || "Não foi possível inativar o produto.");
-      return;
+    setFeedback("");
+    try {
+      await inativar(produto.id);
+    } catch (error) {
+      console.error("[Estoque] inativar", error);
+      setFeedback(
+        error?.message ||
+          "Não foi possível inativar o produto. Tente novamente."
+      );
     }
-    loadProdutos();
+  }
+
+  if (authLoading) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+        Validando sessão...
+      </div>
+    );
+  }
+
+  if (!proprietarioId) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+        Faça login para gerenciar o estoque.
+      </div>
+    );
   }
 
   return (
@@ -189,15 +182,15 @@ export default function Estoque() {
               Status
             </label>
             <div className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-300">
-              {loading
+              {carregando
                 ? "Carregando estoque..."
                 : `${produtos.length} itens encontrados`}
             </div>
           </div>
         </div>
-        {feedback && (
+        {(erro || feedback) && (
           <div className="mt-4 rounded-xl border border-rose-700 bg-rose-900/40 px-4 py-2 text-sm text-rose-100">
-            {feedback}
+            {erro || feedback}
           </div>
         )}
       </section>
@@ -281,7 +274,7 @@ export default function Estoque() {
           </div>
           {!produtos.length && (
             <p className="px-4 py-6 text-center text-sm text-slate-400">
-              {loading
+              {carregando
                 ? "Carregando produtos..."
                 : "Nenhum produto encontrado."}
             </p>

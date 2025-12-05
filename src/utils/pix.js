@@ -21,9 +21,17 @@ export async function gerarPix(valor, options = {}) {
   const payload =
     options.payload ??
     montarPayloadPix(valor, options.chavePix, options.descricao);
-  return QRCode.toDataURL(payload, {
+  const dataUrl = await QRCode.toDataURL(payload, {
     margin: 1,
     width: 320,
     ...options.qrOptions,
   });
+
+  return {
+    dataUrl,
+    payload,
+    valor: Number(formatarValor(valor)),
+    descricao: options.descricao || "MULTICELL",
+    chavePix: options.chavePix || "00000000000",
+  };
 }

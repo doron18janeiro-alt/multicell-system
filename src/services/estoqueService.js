@@ -1,5 +1,10 @@
 import { supabase } from "./supabaseClient";
 
+const ownerFilter = (proprietarioId) =>
+  proprietarioId
+    ? `loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`
+    : undefined;
+
 const normalizeMoney = (value) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? Number(numeric.toFixed(2)) : 0;
@@ -43,10 +48,15 @@ function normalizeProdutoPayload(payload = {}) {
   return normalized;
 }
 
-export async function listProdutos({ busca, categoria } = {}) {
+export async function listProdutos(proprietarioId, { busca, categoria } = {}) {
+  if (!proprietarioId) {
+    return { data: [], error: new Error("proprietarioId é obrigatório.") };
+  }
+
   let query = supabase
     .from("produtos")
     .select("*")
+    .or(ownerFilter(proprietarioId))
     .eq("ativo", true)
     .order("updated_at", { ascending: false });
 
@@ -72,15 +82,16 @@ export async function listProdutos({ busca, categoria } = {}) {
   return { data: data || [], error: null };
 }
 
-export async function getProduto(id) {
+export async function getProduto(id, proprietarioId) {
   if (!id)
     return { error: new Error("ID do produto é obrigatório"), data: null };
 
-  const { data, error } = await supabase
-    .from("produtos")
-    .select("*")
-    .eq("id", id)
-    .single();
+  let query = supabase.from("produtos").select("*").eq("id", id);
+  if (proprietarioId) {
+    query = query.or(ownerFilter(proprietarioId));
+  }
+
+  const { data, error } = await query.single();
 
   if (error) {
     console.error("[EstoqueService] Erro ao buscar produto", error);
@@ -89,12 +100,17 @@ export async function getProduto(id) {
   return { data, error };
 }
 
-export async function createProduto(payload) {
+export async function createProduto(proprietarioId, payload) {
+  if (!proprietarioId) {
+    return { error: new Error("proprietarioId é obrigatório."), data: null };
+  }
   const normalized = normalizeProdutoPayload(payload);
   if (!normalized.nome) {
     return { error: new Error("Nome do produto é obrigatório."), data: null };
   }
   normalized.created_at = new Date().toISOString();
+  normalized.proprietario_id = proprietarioId;
+  normalized.loja_id = proprietarioId;
 
   const { data, error } = await supabase
     .from("produtos")
@@ -109,7 +125,7 @@ export async function createProduto(payload) {
   return { data, error };
 }
 
-export async function updateProduto(id, payload) {
+export async function updateProduto(id, proprietarioId, payload) {
   if (!id)
     return { error: new Error("ID do produto é obrigatório"), data: null };
   const normalized = normalizeProdutoPayload({
@@ -120,12 +136,12 @@ export async function updateProduto(id, payload) {
     delete normalized.nome; // evita sobrescrever com undefined
   }
 
-  const { data, error } = await supabase
-    .from("produtos")
-    .update(normalized)
-    .eq("id", id)
-    .select()
-    .single();
+  let query = supabase.from("produtos").update(normalized).eq("id", id);
+  if (proprietarioId) {
+    query = query.or(ownerFilter(proprietarioId));
+  }
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     console.error("[EstoqueService] Erro ao atualizar produto", error);
@@ -134,16 +150,19 @@ export async function updateProduto(id, payload) {
   return { data, error };
 }
 
-export async function inativarProduto(id) {
+export async function inativarProduto(id, proprietarioId) {
   if (!id)
     return { error: new Error("ID do produto é obrigatório"), data: null };
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("produtos")
     .update({ ativo: false, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select()
-    .single();
+    .eq("id", id);
+  if (proprietarioId) {
+    query = query.or(ownerFilter(proprietarioId));
+  }
+
+  const { data, error } = await query.select().single();
 
   if (error) {
     console.error("[EstoqueService] Erro ao inativar produto", error);

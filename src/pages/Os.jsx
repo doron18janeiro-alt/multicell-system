@@ -4,6 +4,7 @@ import OsForm from "../components/OsForm";
 import TermoGarantia from "../components/TermoGarantia";
 import FileUploader from "../components/files/FileUploader";
 import FileGallery from "../components/files/FileGallery";
+import { useAuth } from "../contexts/AuthContext";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
 import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
@@ -52,6 +53,7 @@ function formatDate(iso) {
 
 export default function OsPage() {
   const navigate = useNavigate();
+  const { proprietarioId, loading: authLoading } = useAuth();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("todos");
   const [items, setItems] = useState([]);
@@ -186,14 +188,19 @@ export default function OsPage() {
   }
 
   useEffect(() => {
+    if (!proprietarioId) return;
     loadOs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, status]);
+  }, [debouncedSearch, status, proprietarioId]);
 
   async function loadOs() {
+    if (!proprietarioId) return;
     setLoadingList(true);
     setFeedback("");
-    const { data, error } = await listOs({ search: debouncedSearch, status });
+    const { data, error } = await listOs(proprietarioId, {
+      search: debouncedSearch,
+      status,
+    });
     if (error) {
       console.error("Erro ao carregar OS", error);
       setFeedback(error.message);
@@ -216,7 +223,7 @@ export default function OsPage() {
   async function handleDelete(os) {
     if (!window.confirm(`Deseja realmente excluir a OS de ${os.cliente_nome}?`))
       return;
-    const { error } = await deleteOs(os.id);
+    const { error } = await deleteOs(os.id, proprietarioId);
     if (error) {
       alert(error.message);
       return;
@@ -234,8 +241,11 @@ export default function OsPage() {
   async function handleSave(formValues) {
     setSaving(true);
     const actionPromise = editingOs
-      ? updateOs(editingOs.id, formValues)
-      : createOs({ ...formValues, data_entrada: new Date().toISOString() });
+      ? updateOs(editingOs.id, proprietarioId, formValues)
+      : createOs(proprietarioId, {
+          ...formValues,
+          data_entrada: new Date().toISOString(),
+        });
     const { error } = await actionPromise;
     setSaving(false);
     if (error) {
@@ -253,6 +263,22 @@ export default function OsPage() {
       return "Nenhuma OS encontrada para os filtros atuais.";
     return null;
   }, [items.length, loadingList]);
+
+  if (authLoading) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+        Validando sessão...
+      </div>
+    );
+  }
+
+  if (!proprietarioId) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+        Faça login para gerenciar as ordens de serviço.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

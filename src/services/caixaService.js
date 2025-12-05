@@ -1,5 +1,10 @@
 import { supabase } from "./supabaseClient";
 
+const ownerFilter = (proprietarioId) =>
+  proprietarioId
+    ? `loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`
+    : undefined;
+
 const paymentOptions = new Set(["dinheiro", "cartao", "pix", "outro"]);
 
 const normalizeFormaPagamento = (value) => {
@@ -44,7 +49,13 @@ function sanitizeItens(itens = []) {
     .filter(Boolean);
 }
 
-export async function createVenda({ cabecalho = {}, itens = [] } = {}) {
+export async function createVenda(
+  proprietarioId,
+  { cabecalho = {}, itens = [] } = {}
+) {
+  if (!proprietarioId) {
+    return { error: new Error("proprietarioId é obrigatório."), data: null };
+  }
   const itensSanitizados = sanitizeItens(itens);
 
   if (!itensSanitizados.length) {
@@ -63,6 +74,8 @@ export async function createVenda({ cabecalho = {}, itens = [] } = {}) {
     total,
     forma_pagamento: normalizeFormaPagamento(cabecalho.forma_pagamento),
     observacoes: cabecalho.observacoes?.trim() || null,
+    loja_id: proprietarioId,
+    proprietario_id: proprietarioId,
   };
 
   const { data: venda, error: vendaError } = await supabase
@@ -92,13 +105,43 @@ export async function createVenda({ cabecalho = {}, itens = [] } = {}) {
     return { error: itensError };
   }
 
+  const movimentoPayload = {
+    proprietario_id: proprietarioId,
+    tipo: "entrada",
+    descricao: cabecalho.observacoes?.trim() || "Venda registrada no caixa",
+    valor: total,
+    data: payload.data,
+  };
+
+  const { error: movimentoError } = await supabase
+    .from("caixa_movimentos")
+    .insert(movimentoPayload);
+
+  if (movimentoError) {
+    console.error(
+      "[CaixaService] Falha ao registrar movimento de caixa",
+      movimentoError
+    );
+    await supabase.from("itens_venda").delete().eq("venda_id", venda.id);
+    await supabase.from("vendas").delete().eq("id", venda.id);
+    return { error: movimentoError };
+  }
+
   return { data: { venda, itens: itensData } };
 }
 
-export async function listVendas({ dataInicial, dataFinal } = {}) {
+export async function listVendas(
+  proprietarioId,
+  { dataInicial, dataFinal } = {}
+) {
+  if (!proprietarioId) {
+    return { data: [], error: new Error("proprietarioId é obrigatório.") };
+  }
+
   let query = supabase
     .from("vendas")
     .select("*")
+    .or(ownerFilter(proprietarioId))
     .order("data", { ascending: false });
 
   if (dataInicial) {
@@ -115,14 +158,20 @@ export async function listVendas({ dataInicial, dataFinal } = {}) {
   return { data: data || [], error };
 }
 
-export async function getVendaDetalhe(id) {
+export async function getVendaDetalhe(id, proprietarioId) {
   if (!id) return { error: new Error("ID da venda é obrigatório") };
 
   const [
     { data: venda, error: vendaError },
     { data: itens, error: itensError },
   ] = await Promise.all([
-    supabase.from("vendas").select("*").eq("id", id).single(),
+    (async () => {
+      let query = supabase.from("vendas").select("*").eq("id", id);
+      if (proprietarioId) {
+        query = query.or(ownerFilter(proprietarioId));
+      }
+      return query.single();
+    })(),
     supabase
       .from("itens_venda")
       .select("*")
@@ -142,10 +191,25 @@ export async function getVendaDetalhe(id) {
   return { data: { venda, itens: itens || [] } };
 }
 
-export async function getResumoVendas({ dataInicial, dataFinal } = {}) {
+export async function getResumoVendas(
+  proprietarioId,
+  { dataInicial, dataFinal } = {}
+) {
+  if (!proprietarioId) {
+    return {
+      data: {
+        total: 0,
+        quantidade: 0,
+        porPagamento: { dinheiro: 0, cartao: 0, pix: 0, outro: 0 },
+      },
+      error: new Error("proprietarioId é obrigatório."),
+    };
+  }
+
   let query = supabase
     .from("vendas")
     .select("total, forma_pagamento, data")
+    .or(ownerFilter(proprietarioId))
     .order("data", { ascending: false });
 
   if (dataInicial) {

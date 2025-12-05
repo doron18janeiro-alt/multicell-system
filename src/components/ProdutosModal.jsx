@@ -1,41 +1,50 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../services/supabaseClient";
+import { useEffect, useState } from "react";
 
-export default function ProdutosModal({ fechar, produto, atualizar }) {
+export default function ProdutosModal({ fechar, produto, onSubmit }) {
   const [nome, setNome] = useState("");
-  const [preco, setPreco] = useState("");
-  const [estoque, setEstoque] = useState("");
+  const [precoVenda, setPrecoVenda] = useState("");
+  const [quantidade, setQuantidade] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
     if (produto) {
       setNome(produto.nome ?? "");
-      setPreco(produto.preco ?? "");
-      setEstoque(produto.estoque ?? "");
+      setPrecoVenda(produto.preco_venda ?? produto.preco ?? "");
+      setQuantidade(produto.quantidade ?? produto.estoque ?? "");
     } else {
       setNome("");
-      setPreco("");
-      setEstoque("");
+      setPrecoVenda("");
+      setQuantidade("");
     }
   }, [produto]);
 
   async function salvar() {
-    const precoNumero = Number(preco) || 0;
-    const estoqueNumero = Number(estoque) || 0;
+    if (!nome.trim()) {
+      setErro("Informe um nome para o produto.");
+      return;
+    }
+
+    setErro("");
+    setSalvando(true);
 
     const dados = {
       nome: nome.trim(),
-      preco: precoNumero,
-      estoque: estoqueNumero,
+      preco_venda: Number(precoVenda) || 0,
+      quantidade: Number(quantidade) || 0,
     };
 
-    if (produto) {
-      await supabase.from("produtos").update(dados).eq("id", produto.id);
-    } else {
-      await supabase.from("produtos").insert(dados);
+    try {
+      await onSubmit?.(dados);
+      fechar();
+    } catch (error) {
+      console.error("[ProdutosModal] salvar", error);
+      setErro(
+        error?.message || "Não foi possível salvar o produto. Tente novamente."
+      );
+    } finally {
+      setSalvando(false);
     }
-
-    atualizar();
-    fechar();
   }
 
   return (
@@ -56,25 +65,34 @@ export default function ProdutosModal({ fechar, produto, atualizar }) {
           </div>
 
           <div>
-            <label className="text-sm">Preço</label>
+            <label className="text-sm">Preço de venda</label>
             <input
               type="number"
               className="w-full border rounded p-2"
-              value={preco}
-              onChange={(e) => setPreco(e.target.value)}
+              value={precoVenda}
+              min="0"
+              step="0.01"
+              onChange={(e) => setPrecoVenda(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="text-sm">Estoque</label>
+            <label className="text-sm">Quantidade em estoque</label>
             <input
               type="number"
               className="w-full border rounded p-2"
-              value={estoque}
-              onChange={(e) => setEstoque(e.target.value)}
+              value={quantidade}
+              min="0"
+              onChange={(e) => setQuantidade(e.target.value)}
             />
           </div>
         </div>
+
+        {erro && (
+          <div className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {erro}
+          </div>
+        )}
 
         <div className="mt-5 flex justify-end gap-3">
           <button onClick={fechar} className="px-4 py-2 bg-gray-300 rounded">
@@ -84,8 +102,9 @@ export default function ProdutosModal({ fechar, produto, atualizar }) {
           <button
             onClick={salvar}
             className="px-4 py-2 bg-blue-600 text-white rounded"
+            disabled={salvando}
           >
-            Salvar
+            {salvando ? "Salvando..." : "Salvar"}
           </button>
         </div>
       </div>

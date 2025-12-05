@@ -46,6 +46,29 @@
 
 .header-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-user {
+  text-align: right;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.header-user-label {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.header-user-email {
+  display: block;
+  font-size: 0.95rem;
+  color: #fff;
 }
 
 .header-title-block {

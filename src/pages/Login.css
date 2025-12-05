@@ -102,3 +102,20 @@
   transform: translateY(-2px);
   filter: brightness(1.1);
 }
+
+.login-alert {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 94, 94, 0.12);
+  border: 1px solid rgba(255, 94, 94, 0.35);
+  color: #ffc5c5;
+  font-size: 0.85rem;
+}
+
+.login-hint {
+  margin-top: 18px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  opacity: 0.55;
+}

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+// Arquivo legado removido após reorganização de rotas
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 const AppLayout = lazy(() => import("./layouts/AppLayout"));

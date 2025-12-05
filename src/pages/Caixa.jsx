@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import {
   createVenda,
   getVendaDetalhe,
@@ -7,6 +8,8 @@ import {
 import { imprimir, modeloCupomVenda, printElementById } from "../utils/print";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
+import { gerarCupom } from "../utils/cupom";
+import { gerarPix } from "../utils/pix";
 
 const paymentOptions = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -75,6 +78,7 @@ const AUTO_PRINT_VENDA = import.meta.env.VITE_AUTO_PRINT_VENDA === "true";
 const LOJA_NOME = import.meta.env.VITE_LOJA_NOME || "Multicell System";
 const LOJA_CNPJ = import.meta.env.VITE_LOJA_CNPJ || "";
 const LOJA_TELEFONE = import.meta.env.VITE_LOJA_TELEFONE || "";
+const PIX_CHAVE = import.meta.env.VITE_PIX_CHAVE || "00000000000";
 
 function montarCupomFromDetalhe(det) {
   if (!det) return null;
@@ -199,6 +203,7 @@ export function gerarHtmlCupomVenda(venda = {}, itens = []) {
 }
 
 export default function Caixa() {
+  const { proprietarioId, loading: authLoading } = useAuth();
   const [filters, setFilters] = useState(() => {
     const now = new Date();
     const start = new Date(now);
@@ -221,6 +226,8 @@ export default function Caixa() {
   const [itemDraft, setItemDraft] = useState(() => emptyItem());
   const [saving, setSaving] = useState(false);
   const [formMessage, setFormMessage] = useState(null);
+  const [cupomPreview, setCupomPreview] = useState("");
+  const [pixPreview, setPixPreview] = useState(null);
 
   const handlePrintCupom = () => {
     printElementById("cupom-print-area", "Cupom de Venda");
@@ -279,12 +286,21 @@ export default function Caixa() {
     });
   };
 
+  function enviarCupomBluetoothPlaceholder(texto) {
+    if (!texto) return;
+    console.info("[Caixa] Cupom pronto para impressão Bluetooth:", texto);
+    // Em React Native, substituir o console.log por BluetoothEscposPrinter.printText
+    // ou integração equivalente para enviar o cupom diretamente para a impressora.
+  }
+
   useEffect(() => {
+    if (!proprietarioId) return;
     loadVendas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.dataInicial, filters.dataFinal]);
+  }, [filters.dataInicial, filters.dataFinal, proprietarioId]);
 
   async function loadVendas() {
+    if (!proprietarioId) return;
     setLoadingList(true);
     setListError("");
     const payload = {
@@ -295,7 +311,7 @@ export default function Caixa() {
         ? new Date(`${filters.dataFinal}T23:59:59`).toISOString()
         : undefined,
     };
-    const { data, error } = await listVendas(payload);
+    const { data, error } = await listVendas(proprietarioId, payload);
     if (error) {
       setListError(error.message || "Não foi possível carregar as vendas.");
     }
@@ -304,9 +320,10 @@ export default function Caixa() {
   }
 
   async function handleSelectVenda(venda) {
+    if (!proprietarioId) return;
     setSelectedVenda(null);
     setLoadingDetalhe(true);
-    const { data, error } = await getVendaDetalhe(venda.id);
+    const { data, error } = await getVendaDetalhe(venda.id, proprietarioId);
     setLoadingDetalhe(false);
     if (error) {
       setListError(error.message || "Falha ao carregar detalhes da venda.");
@@ -362,6 +379,10 @@ export default function Caixa() {
   }
 
   async function handleSaveVenda() {
+    if (!proprietarioId) {
+      setFormMessage({ type: "error", text: "Faça login novamente." });
+      return;
+    }
     if (!itens.length) {
       setFormMessage({ type: "error", text: "Adicione ao menos um item." });
       return;
@@ -382,7 +403,10 @@ export default function Caixa() {
         subtotal: item.subtotal,
       })),
     };
-    const { data: vendaRegistrada, error } = await createVenda(payload);
+    const { data: vendaRegistrada, error } = await createVenda(
+      proprietarioId,
+      payload
+    );
     setSaving(false);
     if (error) {
       setFormMessage({
@@ -416,11 +440,47 @@ export default function Caixa() {
       titulo: "Cupom de venda",
       conteudoHtml: cupomHtml,
     });
+    const cupomTexto = gerarCupom(vendaParaCupom, itensParaCupom);
+    setCupomPreview(cupomTexto);
+
+    if (
+      (vendaParaCupom.forma_pagamento || payload.cabecalho.forma_pagamento) ===
+      "pix"
+    ) {
+      try {
+        const pixData = await gerarPix(vendaParaCupom.total, {
+          chavePix: PIX_CHAVE,
+          descricao: vendaParaCupom.cliente_nome || "Venda Multicell",
+        });
+        setPixPreview({ ...pixData, valor: vendaParaCupom.total });
+      } catch (pixError) {
+        console.error("[Caixa] Falha ao gerar QR Code PIX", pixError);
+        setPixPreview(null);
+      }
+    } else {
+      setPixPreview(null);
+    }
     loadVendas();
     setTimeout(() => {
       setDrawerOpen(false);
       resetForm();
     }, 600);
+  }
+
+  if (authLoading) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+        Validando sessão...
+      </div>
+    );
+  }
+
+  if (!proprietarioId) {
+    return (
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+        Faça login para acessar o caixa.
+      </div>
+    );
   }
 
   return (
@@ -663,6 +723,56 @@ export default function Caixa() {
           {!selectedVenda && !loadingDetalhe && (
             <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-5 text-center text-sm text-slate-400">
               Selecione uma venda para ver os detalhes completos.
+            </div>
+          )}
+
+          {cupomPreview && (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">
+                    Cupom gerado
+                  </p>
+                  <h3 className="text-lg font-semibold text-white">
+                    Última venda registrada
+                  </h3>
+                </div>
+                <button
+                  className="text-xs rounded-lg border border-emerald-500/60 px-3 py-1 text-emerald-200 hover:bg-emerald-500/10"
+                  onClick={() => enviarCupomBluetoothPlaceholder(cupomPreview)}
+                >
+                  Bluetooth
+                </button>
+              </div>
+              <pre className="max-h-56 overflow-auto rounded-xl bg-slate-950/60 p-4 text-xs text-slate-200">
+                {cupomPreview}
+              </pre>
+            </div>
+          )}
+
+          {pixPreview?.dataUrl && (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-slate-500">
+                  Pagamento PIX
+                </p>
+                <h3 className="text-lg font-semibold text-white">
+                  Escaneie para receber
+                </h3>
+              </div>
+              <div className="flex flex-col items-center gap-3">
+                <img
+                  src={pixPreview.dataUrl}
+                  alt="QR Code PIX"
+                  className="h-48 w-48 rounded-xl border border-slate-800 bg-white p-2"
+                />
+                <p className="text-sm text-slate-300">
+                  Valor: <strong>{formatCurrency(pixPreview.valor)}</strong>
+                </p>
+                <p className="text-[11px] text-slate-500 break-all">
+                  Payload: {pixPreview.payload}
+                </p>
+              </div>
             </div>
           )}
         </aside>

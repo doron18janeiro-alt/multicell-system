@@ -1,15 +1,19 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../services/supabase";
+import { useAuth } from "../contexts/AuthContext";
 import Logo from "../assets/logo.png";
 import "./Header.css";
 
 function Header() {
   const nav = useNavigate();
+  const { usuario, logout } = useAuth();
 
-  async function logout() {
-    await supabase.auth.signOut();
-    nav("/login");
+  async function handleLogout() {
+    try {
+      await logout();
+    } finally {
+      nav("/login");
+    }
   }
 
   return (
@@ -26,8 +30,15 @@ function Header() {
       </div>
 
       <div className="header-actions">
+        <div className="header-user">
+          <p className="header-user-label">Logado como</p>
+          <strong className="header-user-email">
+            {usuario?.email || usuario?.nome || "usuário"}
+          </strong>
+        </div>
+
         <button
-          onClick={logout}
+          onClick={handleLogout}
           className="btn-gold"
           style={{ padding: "6px 12px" }}
         >
