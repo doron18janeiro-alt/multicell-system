@@ -43,4 +43,12 @@ Execute sempre após uma migração ou antes de publicar para um novo cliente:
 3. Combine canal de suporte (WhatsApp/Email) e SLA de resposta.
 4. Documente qualquer customização específica dessa loja dentro do CRM interno.
 
+## 6. Seeds e deploy Supabase
+
+1. **Aplicar migrations**: após cada alteração em `supabase/migrations`, rode `supabase db push` (ou `supabase db reset` em ambiente local) apontando para o banco desejado.
+2. **Popular seeds**: execute `supabase db seed` para garantir que o proprietário/admin padrão (email `admin@multicellsystem.com.br`) e a configuração `system-config` existam. Isso é obrigatório antes de liberar um novo ambiente.
+3. **Secrets do pipeline**: o workflow `.github/workflows/supabase.yml` exige `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` e `SUPABASE_DB_PASSWORD` configurados nos secrets do repositório. O token precisa ter acesso de serviço ao projeto Supabase.
+4. **URL oficial**: no painel do Supabase, defina `auth.site_url` como `https://www.multicellsystem.com.br` (domínio oficial) para garantir redirecionamentos de email e uso correto do magic link.
+5. **Execução manual**: quando necessário publicar fora do pipeline, utilize `supabase login`, `supabase db push` e `supabase db seed` diretamente, reutilizando o mesmo `PROJECT_REF` (`utcaazucxyxoxofoltsb`).
+
 Com esses passos validados, o ambiente fica pronto para ser vendido/apresentado para novos clientes com segurança.

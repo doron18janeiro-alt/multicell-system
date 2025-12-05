@@ -37,8 +37,8 @@ export function AuthProvider({ children }) {
   }, [persistirSessao]);
 
   const sincronizarProprietario = useCallback(
-    async (email, { skipLoading = false } = {}) => {
-      if (!email) {
+    async (user, { skipLoading = false } = {}) => {
+      if (!user?.id) {
         limparSessao();
         return;
       }
@@ -48,23 +48,20 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const { data, error } = await supabase
+        const { data: owner, error: ownerError } = await supabase
           .from("proprietarios")
           .select("id,nome,email")
-          .ilike("email", email)
-          .maybeSingle();
+          .eq("user_id", user.id)
+          .single();
 
-        if (error) throw error;
-        if (!data) {
-          throw new Error(
-            "Proprietário não encontrado para o e-mail informado."
-          );
+        if (ownerError) {
+          throw ownerError;
         }
 
         persistirSessao({
-          id: data.id,
-          nome: data.nome,
-          email: data.email ?? email,
+          id: owner.id,
+          nome: owner.nome,
+          email: owner.email ?? user.email,
         });
       } catch (error) {
         console.error("[AuthContext] Falha ao sincronizar proprietário", error);
@@ -97,9 +94,9 @@ export function AuthProvider({ children }) {
         const { data } = await supabase.auth.getSession();
         if (!ativo) return;
 
-        const email = data.session?.user?.email;
-        if (email) {
-          await sincronizarProprietario(email, { skipLoading: true });
+        const user = data.session?.user;
+        if (user?.id) {
+          await sincronizarProprietario(user, { skipLoading: true });
         } else {
           setLoading(false);
         }
@@ -113,9 +110,9 @@ export function AuthProvider({ children }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
       if (!ativo) return;
-      const email = session?.user?.email;
-      if (email) {
-        sincronizarProprietario(email).catch(() => {});
+      const user = session?.user;
+      if (user?.id) {
+        sincronizarProprietario(user).catch(() => {});
       } else {
         limparSessao();
       }
@@ -135,7 +132,7 @@ export function AuthProvider({ children }) {
 
       setLoading(true);
       try {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password: senha,
         });
@@ -144,7 +141,7 @@ export function AuthProvider({ children }) {
           throw error;
         }
 
-        await sincronizarProprietario(email, { skipLoading: true });
+        await sincronizarProprietario(data?.user, { skipLoading: true });
       } catch (error) {
         console.error("[AuthContext] Login falhou", error);
         throw error;

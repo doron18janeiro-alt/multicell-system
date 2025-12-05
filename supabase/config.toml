@@ -1,0 +1,62 @@
+project_id = "utcaazucxyxoxofoltsb"
+
+[api]
+enabled = true
+api_host = "0.0.0.0"
+api_port = 54321
+max_rows = 1000
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+
+[db]
+enabled = true
+port = 54322
+shadow_port = 54323
+major_version = 15
+
+[db.pooler]
+pool_mode = "transaction"
+port = 54329
+
+[studio]
+enabled = true
+port = 54324
+
+[inbucket]
+enabled = true
+port = 54325
+
+[storage]
+enabled = true
+port = 54326
+file_size_limit = "50MiB"
+
+[realtime]
+enabled = true
+port = 54327
+
+[analytics]
+enabled = false
+port = 54328
+
+[functions]
+denon_version = "1.40.1"
+port = 54330
+
+[edge_functions]
+denon_version = "1.40.1"
+port = 54331
+
+[auth]
+site_url = "http://localhost:54321"
+smtp_admin_email = "admin@example.com"
+smtp_host = "localhost"
+smtp_port = 1025
+sms_sender = "SUPABASE"
+mailer_autoconfirm = true
+
+[auth.external]
+google.enabled = false
+github.enabled = false
+azure.enabled = false
+
