@@ -1,189 +1,86 @@
-import { useEffect, useState } from "react";
-import {
-  Routes,
-  Route,
-  useLocation,
-  useNavigate,
-  Navigate,
-  Outlet,
-} from "react-router-dom";
-import Sidebar from "./components/Sidebar";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Estoque from "./pages/Estoque";
-import Caixa from "./pages/Caixa";
-import Historico from "./pages/Historico";
-import OS from "./pages/OS";
-import TermoGarantia from "./pages/TermoGarantia";
-import Config from "./pages/Config";
-import Splash from "./pages/Splash";
-import {
-  carregarProdutos,
-  carregarVendas,
-  criarProduto,
-  registrarVenda,
-  subscribeRealtime,
-  listarOS,
-  subscribeRealtimeOS,
-} from "./supabaseClient";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { AuthProvider } from "./contexts/AuthContext";
+import PrivateRoute from "./routes/PrivateRoute";
+import AppLayout from "./layout/AppLayout";
 
-function Header({ current }) {
-  return (
-    <div className="main-header">
-      <div className="main-title">{current}</div>
-    </div>
-  );
-}
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Produtos = lazy(() => import("./pages/Produtos"));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const Os = lazy(() => import("./pages/Os"));
+const Caixa = lazy(() => import("./pages/Caixa"));
+const Estoque = lazy(() => import("./pages/Estoque"));
+const Vendas = lazy(() => import("./pages/Vendas"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const Config = lazy(() => import("./pages/Config"));
+const ConfigUsuarios = lazy(() => import("./pages/ConfigUsuarios"));
+const TermoGarantia = lazy(() => import("./pages/TermoGarantia"));
+const Historico = lazy(() => import("./pages/Historico"));
+const DespesasList = lazy(() => import("./pages/Despesas/Despesas"));
+const NovaDespesa = lazy(() => import("./pages/Despesas/NovaDespesa"));
+const DetalhesDespesa = lazy(() => import("./pages/Despesas/DetalhesDespesa"));
 
-function ProtectedLayout({
-  authed,
-  loading,
-  currentTitle,
-  produtos,
-  vendas,
-  ordens,
-  onRegistrarVenda,
-}) {
-  if (!authed) return <Navigate to="/login" replace />;
+function CinematicFallback() {
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <main className="main">
-        <Header current={currentTitle} />
-        {loading ? (
-          <div className="panel">Carregando dados...</div>
-        ) : (
-          <Outlet
-            context={{ produtos, vendas, ordens, onRegistrarVenda }}
-          />
-        )}
-      </main>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#050114] text-slate-100">
+      <div className="relative px-10 py-8 rounded-3xl border border-slate-800/60 bg-slate-900/40 backdrop-blur-2xl shadow-[0_30px_80px_rgba(3,7,18,0.9)]">
+        <div
+          className="absolute inset-3 rounded-2xl border border-slate-700/40 animate-pulse"
+          aria-hidden
+        />
+        <div className="relative text-center space-y-3">
+          <p className="text-xs uppercase tracking-[0.5em] text-slate-400">
+            Carregando cockpit
+          </p>
+          <p className="text-lg font-semibold text-white">
+            Preparando módulos avançados…
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function App() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [isAuthed, setIsAuthed] = useState(
-    localStorage.getItem("multicell-auth") === "true"
-  );
-  const [produtos, setProdutos] = useState([]);
-  const [vendas, setVendas] = useState([]);
-  const [ordens, setOrdens] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // mantém comportamento para outras rotas; splash já é a rota inicial (/)
-  }, []);
-
-  const loadDados = async () => {
-    setLoading(true);
-    const [prods, vds, oss] = await Promise.all([
-      carregarProdutos(),
-      carregarVendas(),
-      listarOS(),
-    ]);
-    setProdutos(prods);
-    setVendas(vds);
-    setOrdens(oss);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (!isAuthed) return;
-    loadDados();
-    const unsub = subscribeRealtime(() => loadDados(), () => loadDados());
-    const unsubOS = subscribeRealtimeOS(() => loadDados());
-    return () => {
-      unsub && unsub();
-      unsubOS && unsubOS();
-    };
-  }, [isAuthed]);
-
-  const handleLogin = () => {
-    setIsAuthed(true);
-  };
-
-  const handleCriarProduto = async (dados) => {
-    const novo = await criarProduto(dados);
-    if (novo) {
-      setProdutos((p) => [novo, ...p]);
-    }
-  };
-
-  const handleRegistrarVenda = async (itens, pagamento) => {
-    const venda = await registrarVenda(itens, pagamento);
-    if (venda) {
-      await loadDados();
-    }
-  };
-
-  const currentTitle =
-    location.pathname === "/estoque"
-      ? "Estoque"
-      : location.pathname === "/caixa"
-      ? "Caixa"
-      : location.pathname === "/historico"
-      ? "Historico"
-      : location.pathname === "/os"
-      ? "Ordens de Servico"
-      : location.pathname === "/garantia"
-      ? "Termo de Garantia"
-      : location.pathname === "/config"
-      ? "Configuracoes"
-      : "Dashboard";
-
   return (
-    <Routes>
-      <Route path="/" element={<Splash />} />
-      <Route path="/splash" element={<Splash />} />
-      <Route path="/login" element={<Login onLogin={handleLogin} />} />
-      <Route
-        path="/*"
-        element={
-          <ProtectedLayout
-            authed={isAuthed}
-            loading={loading}
-            currentTitle={currentTitle}
-            produtos={produtos}
-            vendas={vendas}
-            ordens={ordens}
-            onRegistrarVenda={handleRegistrarVenda}
-          />
-        }
-      >
-        <Route
-          index
-          element={
-            <Dashboard vendas={vendas} produtos={produtos} ordens={ordens} />
-          }
-        />
-        <Route
-          path="estoque"
-          element={<Estoque produtos={produtos} onCriarProduto={handleCriarProduto} />}
-        />
-        <Route
-          path="caixa"
-          element={
-            <Caixa
-              produtos={produtos}
-              onRegistrarVenda={handleRegistrarVenda}
-              vendas={vendas}
-            />
-          }
-        />
-        <Route path="historico" element={<Historico vendas={vendas} ordens={ordens} />} />
-        <Route path="os" element={<OS />} />
-        <Route path="garantia" element={<TermoGarantia />} />
-        <Route path="config" element={<Config />} />
-        <Route
-          path="*"
-          element={
-            <Dashboard vendas={vendas} produtos={produtos} ordens={ordens} />
-          }
-        />
-      </Route>
-    </Routes>
+    <AuthProvider>
+      <BrowserRouter>
+        <Suspense fallback={<CinematicFallback />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <AppLayout />
+                </PrivateRoute>
+              }
+            >
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/produtos" element={<Produtos />} />
+              <Route path="/clientes" element={<Clientes />} />
+              <Route path="/os" element={<Os />} />
+              <Route path="/caixa" element={<Caixa />} />
+              <Route path="/estoque" element={<Estoque />} />
+              <Route path="/vendas" element={<Vendas />} />
+              <Route path="/relatorios" element={<Relatorios />} />
+              <Route path="/config" element={<Config />} />
+              <Route path="/config/usuarios" element={<ConfigUsuarios />} />
+              <Route path="/garantia" element={<TermoGarantia />} />
+              <Route path="/garantia/:id" element={<TermoGarantia />} />
+              <Route path="/historico" element={<Historico />} />
+              <Route path="/despesas" element={<DespesasList />} />
+              <Route path="/despesas/nova" element={<NovaDespesa />} />
+              <Route path="/despesas/:id" element={<DetalhesDespesa />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

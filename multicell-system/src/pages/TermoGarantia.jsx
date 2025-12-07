@@ -1,343 +1,560 @@
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../supabaseClient";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import FileUploader from "../components/files/FileUploader";
+import FileGallery from "../components/files/FileGallery";
+import { supabase } from "../services/supabaseClient";
+import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
+import { compartilharWhatsApp } from "../utils/whatsapp";
+import "../styles/garantia.css";
 
-function gerarProtocoloGarantia() {
-  const agora = new Date();
-  const ano = agora.getFullYear();
-  const num = Math.floor(agora.getTime() % 100000);
-  return `GAR-${ano}-${String(num).padStart(5, "0")}`;
+const TERMOS_GARANTIA = [
+  "A garantia cobre exclusivamente o serviço executado e/ou peça substituída na Multicell.",
+  "Quaisquer sinais de queda, impacto, oxidação, líquidos ou mau uso anulam o certificado.",
+  "A violação de lacres, intervenção de terceiros ou abertura não autorizada invalida a cobertura.",
+  "Peças substituídas obedecem ao prazo legal do fornecedor e precisam ser avaliadas em nossa assistência.",
+  "Para acionar a garantia, apresente este certificado junto a um documento pessoal.",
+];
+
+const CAMPOS_PRINCIPAIS = [
+  { label: "Cliente", keys: ["cliente", "cliente_nome", "nome_cliente"] },
+  { label: "Contato", keys: ["telefone", "cliente_telefone", "contato"] },
+  { label: "Aparelho", keys: ["aparelho", "device", "equipamento"] },
+  { label: "IMEI / Série", keys: ["imei", "serial", "numero_serie"] },
+  {
+    label: "Serviço executado",
+    keys: ["servico", "descricao", "servico_executado"],
+  },
+  { label: "Valor total", keys: ["valor", "valor_total", "valor_servico"] },
+  {
+    label: "Garantia válida até",
+    keys: ["data_validade", "validade", "garantia_fim"],
+  },
+  {
+    label: "Data da entrega",
+    keys: ["data_entrega", "entrega", "data_finalizacao"],
+  },
+  { label: "Responsável técnico", keys: ["tecnico", "responsavel", "usuario"] },
+];
+
+const OBS_KEYS = ["obs", "observacoes", "observacao", "notas"];
+
+const PRINT_ROOT_ID = "garantia-print-root";
+
+function getFirstValue(source, keys) {
+  if (!source) return "";
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
+    }
+  }
+  return "";
 }
 
-function formatarDataBR(dateStr) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString("pt-BR");
+function formatarData(valor) {
+  if (!valor) return "—";
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) {
+    return String(valor);
+  }
+  return data.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
-const camposIniciais = {
-  empresaNome: "MULTICELL Assistencia Tecnica",
-  empresaCnpj: "",
-  empresaFone: "",
-  empresaEndereco: "",
-  clienteNome: "",
-  clienteFone: "",
-  aparelho: "",
-  imei: "",
-  servico: "",
-  valor: "",
-  prazo: "",
-  data: "",
-  tecnico: "",
-  condicoes:
-    "Garantia cobre apenas o servico realizado. Nao cobre queda, impacto, oxidacao, mau uso ou violacao do selo de garantia.",
-};
+function formatarDinheiro(valor) {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  const numero = Number(valor);
+  if (Number.isNaN(numero)) return String(valor);
+  return numero.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
+}
 
 export default function TermoGarantia() {
-  const [form, setForm] = useState(camposIniciais);
-  const [protocolo, setProtocolo] = useState("GERADO AO ATUALIZAR");
-  const [emitidoEm, setEmitidoEm] = useState("");
-  const [listaOS, setListaOS] = useState([]);
+  const params = useParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const preview = useMemo(
-    () => ({
-      ...form,
-      dataFmt: formatarDataBR(form.data),
-      valorFmt: form.valor || "0,00",
-      protocolo,
-      emissao: emitidoEm,
-    }),
-    [form, protocolo, emitidoEm]
-  );
+  const garantiaState = location.state?.garantia || null;
+  const garantiaId =
+    params?.id ||
+    searchParams.get("id") ||
+    location.state?.garantiaId ||
+    garantiaState?.id ||
+    null;
 
-  const preencher = () => {
-    setProtocolo(gerarProtocoloGarantia());
-    setEmitidoEm(new Date().toLocaleDateString("pt-BR"));
-  };
-
-  const imprimir = () => {
-    if (protocolo === "GERADO AO ATUALIZAR") {
-      const ok = window.confirm(
-        "Voce ainda nao atualizou a pre-visualizacao. Deseja imprimir assim mesmo?"
-      );
-      if (!ok) return;
-    }
-    window.print();
-  };
-
-  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
-
-  const carregarOS = async () => {
-    const { data } = await supabase
-      .from("ordens")
-      .select("*")
-      .eq("status", "Concluída")
-      .order("created_at", { ascending: false });
-
-    setListaOS(data || []);
-  };
+  const [garantia, setGarantia] = useState(garantiaState);
+  const [loading, setLoading] = useState(!garantiaState);
+  const [erro, setErro] = useState(null);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [fotosGarantia, setFotosGarantia] = useState([]);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   useEffect(() => {
-    carregarOS();
-  }, []);
+    if (!garantia?.id) {
+      setFotosGarantia([]);
+      setGalleryKey(0);
+      return;
+    }
+    setGalleryKey((prev) => prev + 1);
+  }, [garantia?.id]);
 
-  const selecionar = (os) => {
-    if (!os) return;
-    setForm({
-      ...form,
-      clienteNome: os.cliente,
-      clienteFone: os.telefone || "",
-      aparelho: os.aparelho,
-      imei: os.imei || "",
-      servico: os.servico || "",
-      valor: os.valor || "",
-      data: os.created_at ? os.created_at.split("T")[0] : "",
-      empresaNome: form.empresaNome,
-      empresaCnpj: form.empresaCnpj,
-      empresaFone: form.empresaFone,
-      empresaEndereco: form.empresaEndereco,
-      prazo: form.prazo,
-      tecnico: form.tecnico,
-      condicoes: form.condicoes,
-    });
+  const carregarGarantia = useCallback(async () => {
+    if (!garantiaId) return null;
+
+    const { data, error } = await supabase
+      .from("garantias")
+      .select("*")
+      .eq("id", garantiaId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }, [garantiaId]);
+
+  useEffect(() => {
+    if (garantiaState) {
+      setGarantia(garantiaState);
+      setLoading(false);
+      return;
+    }
+
+    if (!garantiaId) {
+      setLoading(false);
+      return;
+    }
+
+    let ignore = false;
+    setLoading(true);
+    setErro(null);
+
+    carregarGarantia()
+      .then((data) => {
+        if (ignore || !data) return;
+        setGarantia(data);
+      })
+      .catch((error) => {
+        if (ignore) return;
+        console.error("[Garantias] erro ao carregar certificado", error);
+        setErro("Não encontramos este certificado na base Multicell.");
+        setGarantia(null);
+      })
+      .finally(() => {
+        if (ignore) return;
+        setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [garantiaId, garantiaState, carregarGarantia]);
+
+  const fotos = (fotosGarantia || []).map((item) => item?.url_publica || item);
+  const telefoneClienteRaw = getFirstValue(garantia, [
+    "telefone",
+    "cliente_telefone",
+    "contato",
+  ]);
+  const telefoneCliente = telefoneClienteRaw
+    ? telefoneClienteRaw.replace(/\D/g, "")
+    : "";
+  const dadosEmpresa = {
+    nome: garantia?.empresa_nome || garantia?.loja_nome || "Multicell System",
+    cnpj: garantia?.empresa_cnpj || garantia?.loja_cnpj || "",
+    telefone: garantia?.empresa_telefone || garantia?.loja_telefone || "",
+  };
+  const dadosGarantia = {
+    codigo: garantia?.codigo || garantia?.protocolo || garantia?.id || "-",
+    cliente:
+      getFirstValue(garantia, ["cliente", "cliente_nome", "nome_cliente"]) ||
+      "-",
+    aparelho:
+      getFirstValue(garantia, ["aparelho", "device", "equipamento"]) || "-",
+    imei: getFirstValue(garantia, ["imei", "serial", "numero_serie"]) || "-",
+    servico:
+      getFirstValue(garantia, ["servico", "descricao", "servico_executado"]) ||
+      "-",
+    validade_formatada: formatarData(
+      getFirstValue(garantia, ["data_validade", "validade", "garantia_fim"])
+    ),
+  };
+  const dataEmissao =
+    garantia?.data_entrega || garantia?.created_at || new Date().toISOString();
+  const dataEmissaoFormatada = formatarData(dataEmissao);
+  const folhaStyle = {
+    background: "#ffffff",
+    color: "#0f1015",
+    borderRadius: "24px",
+    padding: "40px",
+    boxShadow: "0 25px 65px rgba(0, 0, 0, 0.55)",
+    position: "relative",
   };
 
+  const infoListStyle = {
+    display: "grid",
+    gap: "12px",
+    marginBottom: "24px",
+  };
+
+  const infoRowStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    borderBottom: "1px solid rgba(15, 16, 21, 0.08)",
+    paddingBottom: "8px",
+  };
+
+  const fotosGridStyle = {
+    display: "grid",
+    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+    marginTop: "12px",
+  };
+
+  const handleAtualizarOSConcluidas = async () => {
+    if (!garantiaId) return;
+    setSincronizando(true);
+    setErro(null);
+
+    try {
+      const data = await carregarGarantia();
+      if (data) {
+        setGarantia(data);
+      }
+    } catch (error) {
+      console.error("[Garantias] erro ao sincronizar certificado", error);
+      setErro("Não foi possível sincronizar as OS concluídas agora.");
+    } finally {
+      setSincronizando(false);
+    }
+  };
+
+  const handleVoltar = () => navigate(-1);
+
+  function handleImprimirGarantia() {
+    if (!garantia) {
+      alert("Selecione uma garantia para imprimir.");
+      return;
+    }
+
+    const fotoPrincipal = fotos[0];
+    const html = `
+      <div class="cupom">
+        <h2>CERTIFICADO DE GARANTIA MULTICELL</h2>
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          <strong>${dadosEmpresa.nome}</strong><br/>
+          CNPJ: ${dadosEmpresa.cnpj || "-"}<br/>
+          Telefone: ${dadosEmpresa.telefone || "-"}
+        </div>
+
+        <div class="divisor"></div>
+        <div>
+          <strong>Código:</strong> ${dadosGarantia.codigo}<br/>
+          <strong>Cliente:</strong> ${dadosGarantia.cliente}<br/>
+          <strong>Aparelho:</strong> ${dadosGarantia.aparelho}<br/>
+          <strong>IMEI:</strong> ${dadosGarantia.imei}<br/>
+          <strong>Serviço executado:</strong> ${dadosGarantia.servico}<br/>
+          <strong>Validade:</strong> ${dadosGarantia.validade_formatada}
+        </div>
+
+        ${
+          fotoPrincipal
+            ? `
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          <img src="${fotoPrincipal}" class="foto-principal" />
+          <div>Foto ilustrativa do aparelho / serviço</div>
+        </div>
+        `
+            : ""
+        }
+
+        <div class="divisor"></div>
+        <p>
+          Declaro que o serviço foi executado nas condições descritas acima, estando o cliente ciente das políticas de garantia da Multicell System.
+        </p>
+
+        <div class="divisor"></div>
+        <div class="texto-centro">
+          ________________________________<br/>
+          Assinatura do cliente
+        </div>
+      </div>
+    `;
+
+    imprimirHtmlEmNovaJanela({
+      titulo: "Certificado de Garantia",
+      conteudoHtml: html,
+    });
+  }
+
+  function handleEnviarGarantiaWhatsapp() {
+    if (!garantia) {
+      alert("Selecione uma garantia para compartilhar.");
+      return;
+    }
+
+    const msg = `Olá, ${
+      dadosGarantia.cliente || "cliente"
+    }! Segue o resumo da sua garantia Multicell. OS: ${
+      dadosGarantia.codigo
+    }, aparelho: ${dadosGarantia.aparelho}.`;
+    compartilharWhatsApp({
+      telefone: telefoneCliente || undefined,
+      mensagem: msg,
+    });
+  }
+
   return (
-    <div className="grid" style={{ gap: 16 }}>
-      <section className="garantia-panel panel">
-        <div className="panel-title">Dados para preencher a garantia</div>
-        <div className="panel-sub">
-          Preencha os dados da empresa, cliente e servico. Clique em Atualizar pre-visualizacao e depois
-          em Imprimir garantia.
-        </div>
+    <div className="garantia-container">
+      <button className="btn-voltar" onClick={handleVoltar}>
+        Voltar
+      </button>
 
-        <div className="garantia-grid-form">
-          <div className="full">
-            <label>Selecionar OS concluída</label>
-            <select
-              className="input"
-              onChange={(e) => {
-                const osSel = listaOS.find((o) => o.id === e.target.value);
-                selecionar(osSel);
-              }}
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Escolha uma OS concluída
-              </option>
-              {listaOS.map((os) => (
-                <option key={os.id} value={os.id}>
-                  {os.cliente} — {os.aparelho} — {os.servico}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="full">
-            <label>Nome da empresa</label>
-            <input
-              className="input"
-              value={form.empresaNome}
-              onChange={(e) => setField("empresaNome", e.target.value)}
-              placeholder="MULTICELL Assistencia Tecnica"
-            />
-          </div>
-          <div>
-            <label>CNPJ</label>
-            <input
-              className="input"
-              value={form.empresaCnpj}
-              onChange={(e) => setField("empresaCnpj", e.target.value)}
-              placeholder="00.000.000/0000-00"
-            />
-          </div>
-          <div>
-            <label>Telefone / WhatsApp</label>
-            <input
-              className="input"
-              value={form.empresaFone}
-              onChange={(e) => setField("empresaFone", e.target.value)}
-              placeholder="(43) 9 0000-0000"
-            />
-          </div>
-          <div className="full">
-            <label>Endereco</label>
-            <input
-              className="input"
-              value={form.empresaEndereco}
-              onChange={(e) => setField("empresaEndereco", e.target.value)}
-              placeholder="Rua, numero, bairro, cidade - UF"
-            />
-          </div>
+      <h1 className="garantia-titulo">CERTIFICADO DE GARANTIA MULTICELL</h1>
 
-          <div className="full garantia-divisor" />
-
-          <div>
-            <label>Nome do cliente</label>
-            <input
-              className="input"
-              value={form.clienteNome}
-              onChange={(e) => setField("clienteNome", e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Telefone do cliente</label>
-            <input
-              className="input"
-              value={form.clienteFone}
-              onChange={(e) => setField("clienteFone", e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Aparelho</label>
-            <input
-              className="input"
-              value={form.aparelho}
-              onChange={(e) => setField("aparelho", e.target.value)}
-              placeholder="Ex: Samsung A32"
-            />
-          </div>
-          <div>
-            <label>IMEI (opcional)</label>
-            <input className="input" value={form.imei} onChange={(e) => setField("imei", e.target.value)} />
-          </div>
-
-          <div className="full">
-            <label>Servico realizado</label>
-            <input
-              className="input"
-              value={form.servico}
-              onChange={(e) => setField("servico", e.target.value)}
-              placeholder="Ex: Troca de tela, troca de bateria..."
-            />
-          </div>
-
-          <div>
-            <label>Valor do servico (R$)</label>
-            <input
-              className="input"
-              value={form.valor}
-              onChange={(e) => setField("valor", e.target.value)}
-              placeholder="Ex: 250,00"
-            />
-          </div>
-          <div>
-            <label>Prazo de garantia</label>
-            <input
-              className="input"
-              value={form.prazo}
-              onChange={(e) => setField("prazo", e.target.value)}
-              placeholder="Ex: 90 dias"
-            />
-          </div>
-          <div>
-            <label>Data do servico</label>
-            <input
-              className="input"
-              type="date"
-              value={form.data}
-              onChange={(e) => setField("data", e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Responsavel / tecnico</label>
-            <input
-              className="input"
-              value={form.tecnico}
-              onChange={(e) => setField("tecnico", e.target.value)}
-              placeholder="Nome do tecnico"
-            />
-          </div>
-
-          <div className="full">
-            <label>Condicoes especificas da garantia (opcional)</label>
-            <textarea
-              className="input"
-              value={form.condicoes}
-              onChange={(e) => setField("condicoes", e.target.value)}
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <div className="btn-row">
-          <button type="button" className="btn btn-ghost" onClick={preencher}>
-            Atualizar pre-visualizacao
+      {garantia && (
+        <div className="garantia-actions">
+          <button
+            type="button"
+            className="btn-gold"
+            onClick={handleAtualizarOSConcluidas}
+            disabled={sincronizando}
+          >
+            {sincronizando ? "Sincronizando..." : "Atualizar OS concluídas"}
           </button>
-          <button type="button" className="btn" onClick={imprimir}>
+          <button
+            type="button"
+            className="btn-gold"
+            onClick={handleImprimirGarantia}
+          >
             Imprimir garantia
           </button>
+          <button
+            type="button"
+            className="btn-gold btn-ghost"
+            onClick={handleEnviarGarantiaWhatsapp}
+          >
+            Enviar por WhatsApp
+          </button>
         </div>
-      </section>
+      )}
 
-      <section className="garantia-card" id="garantia-card">
-        <div className="garantia-header">
-          <div>
-            <div className="garantia-title">TERMO DE GARANTIA DE SERVICO</div>
-            <div className="garantia-protocolo">
-              Protocolo: <span>{preview.protocolo}</span>
-            </div>
-          </div>
-          <div className="garantia-emissao">
-            Emitido em: <span>{preview.emissao}</span>
-          </div>
+      {erro && (
+        <div className="card-bloco erro-garantia">
+          <h2 className="card-titulo">Ops!</h2>
+          <p>{erro}</p>
         </div>
+      )}
 
-        <div>
-          <div className="garantia-section-title">Dados da empresa</div>
-          <div className="garantia-grid">
-            <div><span className="label-sm">Empresa:</span> <span>{preview.empresaNome || "-"}</span></div>
-            <div><span className="label-sm">CNPJ:</span> <span>{preview.empresaCnpj || "-"}</span></div>
-            <div><span className="label-sm">Telefone:</span> <span>{preview.empresaFone || "-"}</span></div>
-            <div className="full"><span className="label-sm">Endereco:</span> <span>{preview.empresaEndereco || "-"}</span></div>
-          </div>
-        </div>
-
-        <div>
-          <div className="garantia-section-title">Dados do cliente e do aparelho</div>
-          <div className="garantia-grid">
-            <div><span className="label-sm">Cliente:</span> <span>{preview.clienteNome || "-"}</span></div>
-            <div><span className="label-sm">Telefone:</span> <span>{preview.clienteFone || "-"}</span></div>
-            <div><span className="label-sm">Aparelho:</span> <span>{preview.aparelho || "-"}</span></div>
-            <div><span className="label-sm">IMEI:</span> <span>{preview.imei || "-"}</span></div>
-          </div>
-        </div>
-
-        <div>
-          <div className="garantia-section-title">Servico realizado</div>
-          <div className="garantia-grid">
-            <div className="full">
-              <span className="label-sm">Descricao:</span>
-              <span>{preview.servico || "-"}</span>
-            </div>
-            <div><span className="label-sm">Valor:</span> R$ <span>{preview.valorFmt}</span></div>
-            <div><span className="label-sm">Prazo de garantia:</span> <span>{preview.prazo || "-"}</span></div>
-            <div><span className="label-sm">Data do servico:</span> <span>{preview.dataFmt}</span></div>
-            <div><span className="label-sm">Tecnico:</span> <span>{preview.tecnico || "-"}</span></div>
-          </div>
-        </div>
-
-        <div>
-          <div className="garantia-section-title">Condicoes gerais da garantia</div>
-          <p className="garantia-text">
-            {preview.condicoes ||
-              "Garantia valida para o servico descrito. Perde validade em casos de queda, impacto, oxidacao, mau uso ou violacao por terceiros."}
+      {!garantia && (
+        <div className="card-bloco">
+          <h2 className="card-titulo">Selecione um certificado</h2>
+          <p>
+            Abra este módulo a partir de uma Ordem de Serviço ou do histórico
+            para visualizar os detalhes e registrar fotos do aparelho.
           </p>
         </div>
+      )}
 
-        <div className="assinaturas">
-          <div>
-            <div className="linha-assinatura">Assinatura do cliente</div>
+      {garantia && (
+        <div style={gridWrapperStyle}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "30px" }}
+          >
+            <div className="card-bloco">
+              <h2 className="card-titulo">Informações do serviço</h2>
+
+              {protocolo && (
+                <p>
+                  <strong>Protocolo:</strong> {protocolo}
+                </p>
+              )}
+
+              {camposProcessados.map((campo) => (
+                <p key={campo.label}>
+                  <strong>{campo.label}:</strong> {campo.value}
+                </p>
+              ))}
+
+              <p>
+                <strong>Observações:</strong> {observacoes}
+              </p>
+            </div>
+
+            <div className="card-bloco">
+              <h2 className="card-titulo">Fotos do aparelho</h2>
+              <FileUploader
+                entidade="garantia"
+                entidadeId={garantia.id}
+                onUploaded={(lista) => {
+                  setFotosGarantia(lista || []);
+                  setGalleryKey((prev) => prev + 1);
+                }}
+              />
+              <FileGallery
+                key={`${garantia.id}-${galleryKey}`}
+                entidade="garantia"
+                entidadeId={garantia.id}
+                allowDelete
+                onChange={(lista) => setFotosGarantia(lista || [])}
+              />
+            </div>
           </div>
+
           <div>
-            <div className="linha-assinatura">Assinatura do responsavel tecnico</div>
+            <div id={PRINT_ROOT_ID} style={folhaStyle}>
+              <div style={{ textAlign: "center", marginBottom: "24px" }}>
+                <p
+                  className="muted"
+                  style={{
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Protocolo {protocolo || "—"}
+                </p>
+                <h2
+                  className="garantia-title"
+                  style={{ color: "#0f1015", fontSize: "1.5rem" }}
+                >
+                  CERTIFICADO DE GARANTIA MULTICELL
+                </h2>
+                <p className="muted">Emitido em {dataEmissaoFormatada}</p>
+              </div>
+
+              <div style={infoListStyle}>
+                {camposProcessados.map((campo) => (
+                  <div key={campo.label} style={infoRowStyle}>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      {campo.label}
+                    </span>
+                    <span style={{ fontSize: "0.95rem" }}>{campo.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    letterSpacing: "0.18em",
+                    fontSize: "0.9rem",
+                    textTransform: "uppercase",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Observações
+                </h3>
+                <p style={{ lineHeight: 1.6 }}>{observacoes}</p>
+              </div>
+
+              {fotos.length > 0 && (
+                <div style={{ marginBottom: "24px" }}>
+                  <h3
+                    style={{
+                      letterSpacing: "0.18em",
+                      fontSize: "0.9rem",
+                      textTransform: "uppercase",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Registro fotográfico
+                  </h3>
+                  <div style={fotosGridStyle}>
+                    {fotos.map((foto) => (
+                      <img
+                        key={foto}
+                        src={foto}
+                        alt="Registro fotográfico do aparelho"
+                        style={{
+                          width: "100%",
+                          borderRadius: "16px",
+                          border: "1px solid rgba(15, 16, 21, 0.12)",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    letterSpacing: "0.18em",
+                    fontSize: "0.9rem",
+                    textTransform: "uppercase",
+                    marginBottom: "12px",
+                  }}
+                >
+                  Termos da garantia
+                </h3>
+                <ol className="garantia-termos">
+                  {TERMOS_GARANTIA.map((texto, index) => (
+                    <li key={texto}>
+                      <strong>{index + 1}.</strong> {texto}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "24px",
+                  marginTop: "24px",
+                  textAlign: "center",
+                }}
+              >
+                <div>
+                  <p>_______________________________</p>
+                  <span
+                    style={{
+                      letterSpacing: "0.15em",
+                      textTransform: "uppercase",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Assinatura do Técnico
+                  </span>
+                </div>
+
+                <div>
+                  <p>_______________________________</p>
+                  <span
+                    style={{
+                      letterSpacing: "0.15em",
+                      textTransform: "uppercase",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    Assinatura do Cliente
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="info-footer">
-          Ao assinar, o cliente declara que recebeu o aparelho em perfeito funcionamento referente ao
-          servico realizado e esta ciente das condicoes desta garantia.
-        </div>
-      </section>
+      )}
     </div>
   );
 }
