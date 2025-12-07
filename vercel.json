@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "framework": "vite",
-  "outputDirectory": "resgate/multicell-system/dist",
-  "routes": [{ "src": "/(.*)", "dest": "/index.html" }]
+  "builds": [
+    { "src": "multicell-system/package.json", "use": "@vercel/static-build" }
+  ],
+  "routes": [{ "src": "/(.*)", "dest": "multicell-system/dist/$1" }]
 }
