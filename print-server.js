@@ -15,6 +15,10 @@ function logPrefix() {
 const app = express();
 app.use(bodyParser.json({ limit: "1mb" }));
 
+app.get("/", (req, res) => {
+  res.send("LPTECH BOT ONLINE");
+});
+
 app.post("/print", async (req, res) => {
   const { ip, texto = "", qrUrl } = req.body || {};
 

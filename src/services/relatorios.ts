@@ -57,7 +57,7 @@ export async function obterFaturamentoDiario(
   proprietarioId: string
 ): Promise<FaturamentoDiarioItem[]> {
   const { data, error } = await supabase.rpc("faturamento_diario", {
-    loja: proprietarioId,
+    proprietario: proprietarioId,
   });
 
   if (error) {
@@ -80,7 +80,7 @@ export async function obterTopProdutos(
   proprietarioId: string
 ): Promise<TopProdutoItem[]> {
   const { data, error } = await supabase.rpc("top_produtos", {
-    loja: proprietarioId,
+    proprietario: proprietarioId,
   });
 
   if (error) {
@@ -96,7 +96,7 @@ export async function obterTopProdutos(
 
 /**
  * Monta um resumo de vendas diretamente na tabela `vendas`, filtrando pelo
- * `loja_id/proprietario_id`. Retorna o total faturado, quantidade de vendas e
+ * `proprietario_id`. Retorna o total faturado, quantidade de vendas e
  * ticket médio do período informado.
  */
 export async function obterResumoVendas(
@@ -107,7 +107,7 @@ export async function obterResumoVendas(
   const { data, error } = await supabase
     .from("vendas")
     .select("total_liquido,data_venda")
-    .or(`loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`)
+    .eq("proprietario_id", proprietarioId)
     .gte("data_venda", inicio);
 
   if (error) {

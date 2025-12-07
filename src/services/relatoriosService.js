@@ -24,7 +24,7 @@ const startOfMonth = () => {
 
 export async function obterFaturamentoDiario(proprietarioId) {
   const { data, error } = await supabase.rpc("faturamento_diario", {
-    loja: proprietarioId,
+    proprietario: proprietarioId,
   });
 
   if (error) {
@@ -40,7 +40,7 @@ export async function obterFaturamentoDiario(proprietarioId) {
 
 export async function obterTopProdutos(proprietarioId) {
   const { data, error } = await supabase.rpc("top_produtos", {
-    loja: proprietarioId,
+    proprietario: proprietarioId,
   });
 
   if (error) {
@@ -65,7 +65,7 @@ export async function obterVendasRecentes(proprietarioId) {
       "id,data_venda,forma_pagamento,total_liquido,cliente:clientes(nome)",
       { count: "exact" }
     )
-    .or(`loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`)
+    .eq("proprietario_id", proprietarioId)
     .gte("data_venda", inicioPeriodo)
     .order("data_venda", { ascending: false })
     .limit(10);
@@ -88,7 +88,7 @@ export async function obterResumoMensal(proprietarioId) {
   const { data, error } = await supabase
     .from("vendas")
     .select("id,total_bruto,total_liquido,desconto,data_venda,forma_pagamento")
-    .or(`loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`)
+    .eq("proprietario_id", proprietarioId)
     .gte("data_venda", inicioMes);
 
   if (error) {
@@ -122,11 +122,11 @@ export async function obterResumoMensal(proprietarioId) {
 }
 
 export function faturamentoDiario(id) {
-  return supabase.rpc("faturamento_diario", { loja: id });
+  return supabase.rpc("faturamento_diario", { proprietario: id });
 }
 
 export function topProdutos(id) {
-  return supabase.rpc("top_produtos", { loja: id });
+  return supabase.rpc("top_produtos", { proprietario: id });
 }
 
 /*

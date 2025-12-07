@@ -1,0 +1,20 @@
+#cupom {
+  width: 280px;
+  font-size: 13px;
+  font-family: monospace;
+  padding: 10px;
+  color: #000;
+  background: #fff;
+}
+
+#cupom h2,
+#cupom h3 {
+  text-align: center;
+  margin: 5px 0;
+}
+
+hr {
+  border: 0;
+  border-bottom: 1px dashed #000;
+  margin: 6px 0;
+}

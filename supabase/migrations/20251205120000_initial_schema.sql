@@ -90,7 +90,6 @@ create table if not exists public.proprietarios (
 create table if not exists public.clientes (
   id uuid primary key default gen_random_uuid(),
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   nome text not null,
   telefone text,
   email text,
@@ -106,7 +105,6 @@ create table if not exists public.clientes (
 create table if not exists public.produtos (
   id uuid primary key default gen_random_uuid(),
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   nome text not null,
   codigo text,
   categoria text,
@@ -125,13 +123,69 @@ create table if not exists public.produtos (
   atualizado_em timestamptz not null default timezone('utc', now())
 );
 
+alter table if exists public.produtos
+  add column if not exists proprietario_id uuid;
+
+alter table if exists public.produtos
+  add column if not exists created_at timestamptz not null default timezone('utc', now());
+
+alter table if exists public.produtos
+  add column if not exists updated_at timestamptz not null default timezone('utc', now());
+
+alter table if exists public.produtos
+  add column if not exists criado_em timestamptz not null default timezone('utc', now());
+
+alter table if exists public.produtos
+  add column if not exists atualizado_em timestamptz not null default timezone('utc', now());
+
+update public.produtos
+set proprietario_id = '8def6638-8eac-465a-84e8-26764eb36eeb'
+where proprietario_id is null;
+
+do $$
+declare
+  has_user_id boolean;
+begin
+  select exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'proprietarios'
+      and column_name = 'user_id'
+  ) into has_user_id;
+
+  if has_user_id then
+    begin
+      execute 'create unique index if not exists proprietarios_user_id_unq on public.proprietarios(user_id)';
+      alter table public.produtos
+        add constraint produtos_proprietario_fk
+        foreign key (proprietario_id)
+        references public.proprietarios(user_id)
+        on delete cascade;
+    exception
+      when duplicate_object then
+        null;
+    end;
+  else
+    begin
+      alter table public.produtos
+        add constraint produtos_proprietario_fk
+        foreign key (proprietario_id)
+        references public.proprietarios(id)
+        on delete cascade;
+    exception
+      when duplicate_object then
+        null;
+    end;
+  end if;
+end $$;
+
 create unique index if not exists produtos_codigo_unq on public.produtos (proprietario_id, lower(codigo)) where codigo is not null;
 create index if not exists produtos_owner_nome_idx on public.produtos (proprietario_id, nome);
 
 create table if not exists public.vendas (
   id uuid primary key default gen_random_uuid(),
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   cliente_id uuid references public.clientes(id) on delete set null,
   cliente_nome text,
   forma_pagamento text not null default 'pix' check (forma_pagamento in ('dinheiro','cartao','pix','outro')),
@@ -169,7 +223,6 @@ create table if not exists public.itens_venda (
 create table if not exists public.caixa_movimentos (
   id uuid primary key default gen_random_uuid(),
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   tipo text not null check (tipo in ('entrada','saida')),
   descricao text,
   categoria text,
@@ -185,7 +238,6 @@ create table if not exists public.os (
   id uuid primary key default gen_random_uuid(),
   numero bigserial unique,
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   cliente_nome text not null,
   cliente text,
   cliente_telefone text,
@@ -216,7 +268,6 @@ create index if not exists os_owner_status_idx on public.os (proprietario_id, st
 create table if not exists public.garantias (
   id uuid primary key default gen_random_uuid(),
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   os_id uuid references public.os(id) on delete set null,
   cliente text not null,
   telefone text,
@@ -259,7 +310,6 @@ create table if not exists public.configuracoes (
 create table if not exists public.storage_files (
   id uuid primary key default gen_random_uuid(),
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   entidade text not null,
   entidade_id uuid,
   nome_arquivo text not null,
@@ -273,7 +323,6 @@ create table if not exists public.storage_files (
 create table if not exists public.despesas (
   id uuid primary key default gen_random_uuid(),
   proprietario_id uuid not null references public.proprietarios(id) on delete cascade,
-  loja_id uuid not null references public.proprietarios(id) on delete cascade,
   descricao text not null,
   categoria text,
   valor_total numeric(12,2) not null default 0,
@@ -391,6 +440,19 @@ on public.produtos
 for select
 using (proprietario_id = public.current_owner_id());
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'produtos'
+      and policyname = 'Produtos do proprietário'
+  ) then
+    execute 'create policy "Produtos do proprietário" on public.produtos for select using (auth.uid() = proprietario_id)';
+  end if;
+end $$;
+
 create policy produtos_mutate_owner
 on public.produtos
 for all
@@ -505,7 +567,7 @@ using (true)
 with check (true);
 
 -- Functions / RPCs
-create or replace function public.faturamento_diario(p_loja_id uuid default null, dias integer default 7)
+create or replace function public.faturamento_diario(proprietario uuid default null, dias integer default 7)
 returns table(dia date, total numeric)
 language sql
 security definer
@@ -514,14 +576,14 @@ as $$
   select date(v.data_venda) as dia,
          coalesce(sum(v.total_liquido), 0)::numeric as total
   from public.vendas v
-  where v.proprietario_id = public.current_owner_id()
-    and (p_loja_id is null or v.loja_id = p_loja_id)
+  where coalesce(proprietario, public.current_owner_id()) is not null
+    and v.proprietario_id = coalesce(proprietario, public.current_owner_id())
     and v.data_venda >= (timezone('utc', now())::date - (dias - 1))
   group by date(v.data_venda)
   order by dia desc;
 $$;
 
-create or replace function public.top_produtos(p_loja_id uuid default null, limite integer default 5)
+create or replace function public.top_produtos(proprietario uuid default null, limite integer default 5)
 returns table(produto text, qtd bigint)
 language sql
 security definer
@@ -531,8 +593,8 @@ as $$
          sum(i.quantidade)::bigint as qtd
   from public.itens_venda i
   join public.vendas v on v.id = i.venda_id
-  where v.proprietario_id = public.current_owner_id()
-    and (p_loja_id is null or v.loja_id = p_loja_id)
+  where coalesce(proprietario, public.current_owner_id()) is not null
+    and v.proprietario_id = coalesce(proprietario, public.current_owner_id())
   group by coalesce(i.descricao, 'Produto')
   order by qtd desc
   limit limite;

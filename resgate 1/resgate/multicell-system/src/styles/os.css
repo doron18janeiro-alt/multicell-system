@@ -1,0 +1,124 @@
+.os-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.os-card {
+  background: linear-gradient(145deg, rgba(9, 12, 26, 0.9), rgba(6, 10, 20, 0.9));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.55), 0 0 28px rgba(56, 189, 248, 0.22);
+  border-radius: 16px;
+}
+
+.os-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  background: rgba(7, 10, 22, 0.9);
+  padding: 10px 12px;
+  color: #e2e8f0;
+  outline: none;
+  transition: border 0.12s ease, box-shadow 0.12s ease;
+}
+
+.os-input:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+}
+
+.os-label {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.os-item {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(12, 16, 30, 0.9);
+  cursor: pointer;
+  transition: transform 0.08s ease, border 0.12s ease;
+}
+
+.os-item:hover {
+  border-color: #22c55e;
+  transform: translateY(-1px);
+}
+
+.os-protocolo {
+  font-size: 0.78rem;
+  color: #38bdf8;
+  letter-spacing: 0.12em;
+}
+
+.os-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.badge-yellow {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.6);
+  color: #facc15;
+}
+
+.badge-blue {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #60a5fa;
+}
+
+.badge-green {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.6);
+  color: #22c55e;
+}
+
+.badge-gray {
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.6);
+  color: #cbd5e1;
+}
+
+.btn-primary {
+  border-radius: 12px;
+  background: linear-gradient(135deg, #22c55e, #38bdf8);
+  color: #041019;
+  padding: 10px 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(56, 189, 248, 0.28), 0 0 20px rgba(34, 197, 94, 0.35);
+}
+
+.btn-ghost {
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: transparent;
+  color: #e2e8f0;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.os-alert {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.os-alert-ok {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.6);
+  color: #22c55e;
+}
+
+.os-alert-err {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: #f87171;
+}

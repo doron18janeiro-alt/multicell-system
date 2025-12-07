@@ -75,10 +75,10 @@ export default function TelaProdutos() {
     let query = supabase
       .from("produtos")
       .select(
-        "id, nome, codigo, categoria, descricao, preco_custo, preco_venda, quantidade, quantidade_estoque, estoque_minimo, ativo, proprietario_id, loja_id, criado_em, atualizado_em"
+        "id, nome, codigo, categoria, descricao, preco_custo, preco_venda, quantidade, quantidade_estoque, estoque_minimo, ativo, proprietario_id, criado_em, atualizado_em"
       )
       .order("nome", { ascending: true })
-      .or(`proprietario_id.eq.${donoAtual},loja_id.eq.${donoAtual}`);
+      .eq("proprietario_id", donoAtual);
 
     const { data, error } = await query;
 
@@ -177,7 +177,6 @@ export default function TelaProdutos() {
       atualizado_em: new Date().toISOString(),
       // Antes utilizávamos IDs fixos; agora usamos o proprietarioId carregado no contexto.
       proprietario_id: donoAtual,
-      loja_id: donoAtual,
     };
 
     try {

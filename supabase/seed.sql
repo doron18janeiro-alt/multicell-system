@@ -1,9 +1,13 @@
 -- Seed inicial para ambientes locais/remotos.
 -- Executar com `supabase db reset` ou `supabase db seed` após aplicar a migração inicial.
 
-with upsert_owner as (
-	insert into public.proprietarios (nome, email, telefone, documento, endereco, cidade, uf)
-	values (
+with params as (
+	select '8def6638-8eac-465a-84e8-26764eb36eeb'::uuid as lptech_owner_id
+),
+upsert_owner as (
+	insert into public.proprietarios (id, nome, email, telefone, documento, endereco, cidade, uf)
+	select
+		lptech_owner_id,
 		'Multicell Admin',
 		'admin@multicellsystem.com.br',
 		'+55 11 99999-0000',
@@ -11,7 +15,7 @@ with upsert_owner as (
 		'Rua Exemplo, 123',
 		'São Paulo',
 		'SP'
-	)
+	from params
 	on conflict (email) do update set
 		nome = excluded.nome,
 		telefone = excluded.telefone,
@@ -65,8 +69,7 @@ select
 	'admin@multicellsystem.com.br',
 	'ADMIN',
 	true
-from public.proprietarios
-where email = 'admin@multicellsystem.com.br'
-	and not exists (
-		select 1 from public.usuarios where email = 'admin@multicellsystem.com.br'
-	);
+from upsert_owner
+where not exists (
+	select 1 from public.usuarios where email = 'admin@multicellsystem.com.br'
+);

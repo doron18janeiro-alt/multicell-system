@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 
-const ownerFilter = (proprietarioId) =>
-  proprietarioId ? `proprietario_id.eq.${proprietarioId}` : undefined;
+const withOwnerFilter = (query, proprietarioId) =>
+  proprietarioId ? query.eq("proprietario_id", proprietarioId) : query;
 
 export async function listarClientes(proprietarioId, { busca } = {}) {
   if (!proprietarioId) {
@@ -11,7 +11,7 @@ export async function listarClientes(proprietarioId, { busca } = {}) {
   let query = supabase
     .from("clientes")
     .select("*")
-    .or(ownerFilter(proprietarioId))
+    .eq("proprietario_id", proprietarioId)
     .order("nome", { ascending: true });
 
   if (busca?.trim()) {
@@ -50,9 +50,7 @@ export async function atualizarCliente(id, proprietarioId, data) {
   };
 
   let query = supabase.from("clientes").update(payload).eq("id", id);
-  if (proprietarioId) {
-    query = query.or(ownerFilter(proprietarioId));
-  }
+  query = withOwnerFilter(query, proprietarioId);
 
   return query.select().single();
 }
@@ -63,9 +61,7 @@ export async function removerCliente(id, proprietarioId) {
   }
 
   let query = supabase.from("clientes").delete().eq("id", id);
-  if (proprietarioId) {
-    query = query.or(ownerFilter(proprietarioId));
-  }
+  query = withOwnerFilter(query, proprietarioId);
 
   return query;
 }

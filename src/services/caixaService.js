@@ -1,9 +1,7 @@
 import { supabase } from "./supabaseClient";
 
-const ownerFilter = (proprietarioId) =>
-  proprietarioId
-    ? `loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`
-    : undefined;
+const withOwnerFilter = (query, proprietarioId) =>
+  proprietarioId ? query.eq("proprietario_id", proprietarioId) : query;
 
 const paymentOptions = new Set(["dinheiro", "cartao", "pix", "outro"]);
 
@@ -74,7 +72,6 @@ export async function createVenda(
     total,
     forma_pagamento: normalizeFormaPagamento(cabecalho.forma_pagamento),
     observacoes: cabecalho.observacoes?.trim() || null,
-    loja_id: proprietarioId,
     proprietario_id: proprietarioId,
   };
 
@@ -141,7 +138,7 @@ export async function listVendas(
   let query = supabase
     .from("vendas")
     .select("*")
-    .or(ownerFilter(proprietarioId))
+    .eq("proprietario_id", proprietarioId)
     .order("data", { ascending: false });
 
   if (dataInicial) {
@@ -167,9 +164,7 @@ export async function getVendaDetalhe(id, proprietarioId) {
   ] = await Promise.all([
     (async () => {
       let query = supabase.from("vendas").select("*").eq("id", id);
-      if (proprietarioId) {
-        query = query.or(ownerFilter(proprietarioId));
-      }
+      query = withOwnerFilter(query, proprietarioId);
       return query.single();
     })(),
     supabase
@@ -209,7 +204,7 @@ export async function getResumoVendas(
   let query = supabase
     .from("vendas")
     .select("total, forma_pagamento, data")
-    .or(ownerFilter(proprietarioId))
+    .eq("proprietario_id", proprietarioId)
     .order("data", { ascending: false });
 
   if (dataInicial) {

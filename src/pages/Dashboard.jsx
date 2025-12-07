@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { BarChart3, Activity, Diamond, ShoppingBag } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import PrimeCard from "../components/ui/PrimeCard";
+import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
 import {
   obterFaturamentoDiario,
   obterResumoMensal,
@@ -85,160 +88,176 @@ export default function Dashboard() {
     );
   }
 
+  const metricCards = [
+    {
+      label: "Faturamento líquido",
+      value: currency.format(totalLiquido),
+      helper: "Atualizado este mês",
+      icon: Diamond,
+      gradient: "from-[#2b1c1f] via-[#1a1018] to-[#050308]",
+    },
+    {
+      label: "Ticket médio",
+      value: currency.format(ticketMedio),
+      helper: "Ticket consolidado",
+      icon: Activity,
+      gradient: "from-[#1f1f2b] via-[#141423] to-[#050308]",
+    },
+    {
+      label: "Vendas no mês",
+      value: vendasTotais,
+      helper: "Operações concluídas",
+      icon: ShoppingBag,
+      gradient: "from-[#1f1a2b] via-[#101120] to-[#050308]",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <header>
-        <p className="text-sm uppercase tracking-[0.4em] text-slate-500">
-          Visão geral
-        </p>
-        <h1 className="text-3xl font-bold text-slate-900">
-          Desempenho da sua loja
-        </h1>
-        <p className="text-slate-500">
-          Métricas consolidadas diretamente do Supabase para facilitar suas
-          decisões.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <PrimeSectionTitle
+        title="Desempenho da loja"
+        subtitle="Métricas consolidadas diretamente do Supabase para decisões rápidas."
+        icon={BarChart3}
+      />
 
       {erro && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <PrimeCard className="border-red-400/40 bg-red-950/30 text-red-100">
           {erro}
-        </div>
+        </PrimeCard>
       )}
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card
-          titulo="Faturamento líquido"
-          valor={currency.format(totalLiquido)}
-          destaque="text-emerald-600"
-          carregando={carregando}
-        />
-        <Card
-          titulo="Ticket médio"
-          valor={currency.format(ticketMedio)}
-          destaque="text-indigo-600"
-          carregando={carregando}
-        />
-        <Card
-          titulo="Vendas no mês"
-          valor={vendasTotais}
-          destaque="text-slate-900"
-          carregando={carregando}
-        />
+      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {metricCards.map((card) => (
+          <PrimeCard
+            key={card.label}
+            className={`bg-gradient-to-br ${card.gradient} border-transparent text-white`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.4em] text-white/60">
+                  {card.label}
+                </p>
+                <p className="mt-3 text-4xl font-black">
+                  {carregando ? "--" : card.value}
+                </p>
+                <p className="mt-2 text-sm text-white/60">{card.helper}</p>
+              </div>
+              <span className="rounded-2xl bg-black/30 p-3 text-[#ffe8a3]">
+                <card.icon size={26} />
+              </span>
+            </div>
+          </PrimeCard>
+        ))}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="grid gap-6 xl:grid-cols-2">
+        <PrimeCard>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+              <p className="text-xs uppercase tracking-[0.3em] text-[#cdb88d]">
                 Últimos dias
               </p>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Faturamento diário
-              </h2>
+              <h2 className="text-2xl font-semibold">Faturamento diário</h2>
             </div>
             {carregando && (
-              <span className="text-xs text-slate-400">Atualizando...</span>
+              <span className="text-xs text-white/60">Atualizando…</span>
             )}
           </div>
           {faturamento.length === 0 ? (
-            <p className="mt-6 text-sm text-slate-500">
-              Ainda não há vendas registradas no período avaliado.
+            <p className="mt-6 text-sm text-white/70">
+              Ainda não há vendas registradas no período.
             </p>
           ) : (
-            <div className="mt-6 flex items-end gap-3">
+            <div className="mt-8 flex items-end gap-4">
               {faturamento.map((dia) => (
                 <div key={dia.dia} className="flex-1 text-center">
                   <div
-                    className="mx-auto w-full rounded-t-xl bg-gradient-to-b from-indigo-500 to-indigo-300"
+                    className="mx-auto w-full rounded-t-3xl bg-gradient-to-t from-[#8f5eff]/20 to-[#ffe8a3]/40"
                     style={{
                       height: `${(dia.total / faturamentoMax) * 180}px`,
                     }}
                   />
-                  <p className="mt-2 text-xs font-semibold text-slate-500">
+                  <p className="mt-3 text-xs font-semibold text-white/70">
                     {dia.dia?.slice(5) || "--"}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-white/60">
                     {currency.format(dia.total)}
                   </p>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </PrimeCard>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <PrimeCard>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+              <p className="text-xs uppercase tracking-[0.3em] text-[#cdb88d]">
                 Conversão
               </p>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Produtos em destaque
-              </h2>
+              <h2 className="text-2xl font-semibold">Produtos em destaque</h2>
             </div>
           </div>
           {topProdutos.length === 0 ? (
-            <p className="mt-6 text-sm text-slate-500">
-              Sem dados suficientes para o ranking de produtos.
+            <p className="mt-6 text-sm text-white/70">
+              Sem dados suficientes para o ranking.
             </p>
           ) : (
             <ul className="mt-4 space-y-3">
               {topProdutos.slice(0, 5).map((produto, index) => (
                 <li
                   key={`${produto.produto}-${index}`}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-base font-semibold text-white">
                       {produto.produto}
                     </p>
-                    <p className="text-xs text-slate-500">#{index + 1}</p>
+                    <p className="text-xs text-white/50">#{index + 1}</p>
                   </div>
-                  <span className="text-sm font-semibold text-indigo-600">
+                  <span className="text-sm font-semibold text-[#ffe8a3]">
                     {produto.quantidade} vendas
                   </span>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </PrimeCard>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <PrimeCard>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
+            <p className="text-xs uppercase tracking-[0.3em] text-[#cdb88d]">
               Últimas movimentações
             </p>
-            <h2 className="text-lg font-semibold text-slate-900">
-              Vendas recentes
-            </h2>
+            <h2 className="text-2xl font-semibold">Vendas recentes</h2>
           </div>
         </div>
         {vendasRecentes.length === 0 ? (
-          <p className="mt-6 text-sm text-slate-500">
+          <p className="mt-6 text-sm text-white/70">
             Nenhuma venda registrada nos últimos dias.
           </p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase tracking-[0.2em] text-slate-400">
+          <div className="mt-5 overflow-x-auto">
+            <table className="table-premium text-left text-sm">
+              <thead>
                 <tr>
-                  <th className="pb-2">Cliente</th>
-                  <th className="pb-2">Data</th>
-                  <th className="pb-2">Pagamento</th>
-                  <th className="pb-2">Total</th>
+                  <th>Cliente</th>
+                  <th>Data</th>
+                  <th>Pagamento</th>
+                  <th className="text-right">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {vendasRecentes.slice(0, 6).map((venda) => (
-                  <tr key={venda.id} className="text-slate-700">
-                    <td className="py-3 font-semibold">
-                      {venda.cliente?.nome || "Cliente não informado"}
+                  <tr key={venda.id}>
+                    <td className="py-4 font-semibold text-white">
+                      {venda.cliente?.nome ||
+                        venda.cliente_nome ||
+                        "Cliente não informado"}
                     </td>
-                    <td className="py-3 text-sm text-slate-500">
+                    <td className="text-white/70">
                       {venda.data_venda
                         ? new Date(venda.data_venda).toLocaleString("pt-BR", {
                             day: "2-digit",
@@ -248,10 +267,10 @@ export default function Dashboard() {
                           })
                         : "--"}
                     </td>
-                    <td className="py-3 text-sm text-slate-500 capitalize">
+                    <td className="capitalize text-white/70">
                       {venda.forma_pagamento || "--"}
                     </td>
-                    <td className="py-3 font-semibold text-right">
+                    <td className="text-right font-semibold text-[#ffe8a3]">
                       {currency.format(venda.total_liquido || 0)}
                     </td>
                   </tr>
@@ -260,20 +279,7 @@ export default function Dashboard() {
             </table>
           </div>
         )}
-      </section>
-    </div>
-  );
-}
-
-function Card({ titulo, valor, destaque, carregando }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
-        {titulo}
-      </p>
-      <p className={`mt-3 text-3xl font-bold ${destaque}`}>
-        {carregando ? "--" : valor}
-      </p>
+      </PrimeCard>
     </div>
   );
 }

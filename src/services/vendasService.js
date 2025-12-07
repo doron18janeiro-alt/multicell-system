@@ -1,10 +1,5 @@
 import { supabase } from "./supabaseClient";
 
-const ownerFilter = (proprietarioId) =>
-  proprietarioId
-    ? `loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`
-    : undefined;
-
 export async function registrarVenda(proprietarioId, venda, itens = []) {
   if (!proprietarioId) {
     return { error: new Error("proprietarioId é obrigatório."), data: null };
@@ -19,7 +14,6 @@ export async function registrarVenda(proprietarioId, venda, itens = []) {
 
   const payload = {
     ...venda,
-    loja_id: proprietarioId,
     proprietario_id: proprietarioId,
     data_venda: venda?.data_venda || new Date().toISOString(),
     status: venda?.status || "concluido",
@@ -84,7 +78,7 @@ export async function listarVendas(
   let query = supabase
     .from("vendas")
     .select("*")
-    .or(ownerFilter(proprietarioId))
+    .eq("proprietario_id", proprietarioId)
     .order("data_venda", { ascending: false })
     .limit(limite);
 

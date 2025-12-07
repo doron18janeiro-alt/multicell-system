@@ -1,0 +1,50 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test --if-present
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy to Vercel
+        run: npx vercel --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Notify WhatsApp on failure
+        if: failure()
+        run: |
+          curl -X POST "https://SEU-LINK-NGROK-AQUI/deploy-alert" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"status\": \"FAILED\",
+            \"branch\": \"${{ github.ref }}\",
+            \"commit\": \"${{ github.sha }}\",
+            \"url\": \"https://vercel.com/lptech/multicell-system\",
+            \"logs\": \"Deploy falhou no GitHub Actions\"
+          }"

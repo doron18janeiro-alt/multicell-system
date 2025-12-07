@@ -1,9 +1,7 @@
 import { supabase } from "./supabaseClient";
 
-const ownerFilter = (proprietarioId) =>
-  proprietarioId
-    ? `loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`
-    : undefined;
+const withOwnerFilter = (query, proprietarioId) =>
+  proprietarioId ? query.eq("proprietario_id", proprietarioId) : query;
 
 const normalizeMoney = (value) => {
   const numeric = Number(value);
@@ -53,10 +51,10 @@ export async function listProdutos(proprietarioId, { busca, categoria } = {}) {
     return { data: [], error: new Error("proprietarioId é obrigatório.") };
   }
 
-  let query = supabase
-    .from("produtos")
-    .select("*")
-    .or(ownerFilter(proprietarioId))
+  let query = withOwnerFilter(
+    supabase.from("produtos").select("*"),
+    proprietarioId
+  )
     .eq("ativo", true)
     .order("updated_at", { ascending: false });
 
@@ -87,9 +85,7 @@ export async function getProduto(id, proprietarioId) {
     return { error: new Error("ID do produto é obrigatório"), data: null };
 
   let query = supabase.from("produtos").select("*").eq("id", id);
-  if (proprietarioId) {
-    query = query.or(ownerFilter(proprietarioId));
-  }
+  query = withOwnerFilter(query, proprietarioId);
 
   const { data, error } = await query.single();
 
@@ -110,7 +106,6 @@ export async function createProduto(proprietarioId, payload) {
   }
   normalized.created_at = new Date().toISOString();
   normalized.proprietario_id = proprietarioId;
-  normalized.loja_id = proprietarioId;
 
   const { data, error } = await supabase
     .from("produtos")
@@ -137,9 +132,7 @@ export async function updateProduto(id, proprietarioId, payload) {
   }
 
   let query = supabase.from("produtos").update(normalized).eq("id", id);
-  if (proprietarioId) {
-    query = query.or(ownerFilter(proprietarioId));
-  }
+  query = withOwnerFilter(query, proprietarioId);
 
   const { data, error } = await query.select().single();
 
@@ -158,9 +151,7 @@ export async function inativarProduto(id, proprietarioId) {
     .from("produtos")
     .update({ ativo: false, updated_at: new Date().toISOString() })
     .eq("id", id);
-  if (proprietarioId) {
-    query = query.or(ownerFilter(proprietarioId));
-  }
+  query = withOwnerFilter(query, proprietarioId);
 
   const { data, error } = await query.select().single();
 

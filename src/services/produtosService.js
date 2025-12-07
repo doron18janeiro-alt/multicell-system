@@ -1,9 +1,7 @@
 import { supabase } from "./supabaseClient";
 
-const ownerFilter = (proprietarioId) =>
-  proprietarioId
-    ? `loja_id.eq.${proprietarioId},proprietario_id.eq.${proprietarioId}`
-    : undefined;
+const withOwnerFilter = (query, proprietarioId) =>
+  proprietarioId ? query.eq("proprietario_id", proprietarioId) : query;
 
 export async function listarProdutos(proprietarioId, { busca } = {}) {
   if (!proprietarioId) {
@@ -13,7 +11,7 @@ export async function listarProdutos(proprietarioId, { busca } = {}) {
   let query = supabase
     .from("produtos")
     .select("*")
-    .or(ownerFilter(proprietarioId))
+    .eq("proprietario_id", proprietarioId)
     .order("nome", { ascending: true });
 
   if (busca?.trim()) {
@@ -30,7 +28,6 @@ export async function criarProduto(proprietarioId, data) {
 
   const payload = {
     ...data,
-    loja_id: proprietarioId,
     proprietario_id: proprietarioId,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -50,9 +47,7 @@ export async function atualizarProduto(id, proprietarioId, data) {
   };
 
   let query = supabase.from("produtos").update(payload).eq("id", id);
-  if (proprietarioId) {
-    query = query.or(ownerFilter(proprietarioId));
-  }
+  query = withOwnerFilter(query, proprietarioId);
 
   return query.select().single();
 }
@@ -63,8 +58,6 @@ export async function removerProduto(id, proprietarioId) {
   }
 
   let query = supabase.from("produtos").delete().eq("id", id);
-  if (proprietarioId) {
-    query = query.or(ownerFilter(proprietarioId));
-  }
+  query = withOwnerFilter(query, proprietarioId);
   return query;
 }

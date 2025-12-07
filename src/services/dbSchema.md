@@ -5,26 +5,27 @@ Este documento consolida todos os requisitos de banco levantados no frontend. El
 > **Premissas gerais**
 >
 > - Cada loja/proprietário tem um registro em `proprietarios`.
-> - Todas as tabelas de negócio armazenam `proprietario_id` **e** `loja_id` (ambas referenciam `proprietarios.id`) para manter compatibilidade com telas legadas.
-> - O frontend sempre filtra dados pelo owner (`ownerFilter`), portanto as políticas de RLS devem comparar `auth.jwt()->>'email'` com `proprietarios.email`.
-> - Manter duplicidade de campos de data (`created_at/updated_at` e `criado_em/atualizado_em`).
-> - Funções auxiliares necessárias: `current_owner_id()` (retorna o `id` do proprietário com o mesmo e-mail do token) e `current_owner_email()` (retorna `lower(auth.jwt()->>'email')`). Ambas serão `security definer` e ficarão no schema `public`.
+
+- Todas as tabelas de negócio armazenam apenas `proprietario_id` (referência a `proprietarios.id`).
+  > - O frontend sempre filtra dados pelo owner (`ownerFilter`), portanto as políticas de RLS devem comparar `auth.jwt()->>'email'` com `proprietarios.email`.
+  > - Manter duplicidade de campos de data (`created_at/updated_at` e `criado_em/atualizado_em`).
+  > - Funções auxiliares necessárias: `current_owner_id()` (retorna o `id` do proprietário com o mesmo e-mail do token) e `current_owner_email()` (retorna `lower(auth.jwt()->>'email')`). Ambas serão `security definer` e ficarão no schema `public`.
 
 ## Tabelas core
 
 1. **proprietarios** — campos: `id`, `nome`, `email`, `telefone`, `documento`, `auth_user_id`, dados de endereço, `ativo`, timestamps duplos. `SELECT` permitido apenas quando `lower(email) = current_owner_email()`; demais operações somente com `service_role`.
 
-2. **clientes** — `id`, `proprietario_id`, `loja_id`, `nome`, contatos (`telefone`, `email`, `cpf`), `observacoes`, `obs`, timestamps duplos. Todas as operações com RLS `proprietario_id = current_owner_id()`.
+2. **clientes** — `id`, `proprietario_id`, `nome`, contatos (`telefone`, `email`, `cpf`), `observacoes`, `obs`, timestamps duplos. Todas as operações com RLS `proprietario_id = current_owner_id()`.
 
-3. **produtos** — `id`, `proprietario_id`, `loja_id`, `nome`, `codigo`, `categoria`, `descricao`, `preco_custo`, `preco_venda`, `quantidade`, `quantidade_estoque`, `estoque_minimo`, `ativo`, `observacoes`, `fotos text[]`, timestamps duplos + trigger para sincronizá-los. Índices: `(proprietario_id, nome)` e `(proprietario_id, lower(codigo))`.
+3. **produtos** — `id`, `proprietario_id`, `nome`, `codigo`, `categoria`, `descricao`, `preco_custo`, `preco_venda`, `quantidade`, `quantidade_estoque`, `estoque_minimo`, `ativo`, `observacoes`, `fotos text[]`, timestamps duplos + trigger para sincronizá-los. Índices: `(proprietario_id, nome)` e `(proprietario_id, lower(codigo))`.
 
-4. **vendas** — referencia clientes (opcional), guarda `cliente_nome`, `forma_pagamento`, `status`, totais (`total_bruto`, `desconto`, `total_liquido`, `total`), `data_venda`, `data`, `observacoes`, `cabecalho jsonb`, `proprietario_id`, `loja_id`, timestamps.
+4. **vendas** — referencia clientes (opcional), guarda `cliente_nome`, `forma_pagamento`, `status`, totais (`total_bruto`, `desconto`, `total_liquido`, `total`), `data_venda`, `data`, `observacoes`, `cabecalho jsonb`, `proprietario_id`, timestamps.
 
 5. **itens_venda** — `id`, `venda_id`, `produto_id`, `descricao`, `quantidade`, `preco_unitario`, `subtotal`, timestamps.
 
 6. **caixa_movimentos** — `id`, `proprietario_id`, `tipo` (entrada/saída), `descricao`, `categoria`, `valor`, `data`, timestamps.
 
-7. **os** — inclui `numero` (bigserial), `cliente_nome`, `cliente` (alias), contatos, `aparelho`, `aparelho_descricao`, `imei`, `problema_relatado`, `problema`, `servico`, `senha_aparelho`, `tecnico`, valores orçados/finais, `status`, datas (`data_entrada`, `data_entrega`), `observacoes`, `obs`, `proprietario_id`, `loja_id`, timestamps + trigger para preencher aliases.
+7. **os** — inclui `numero` (bigserial), `cliente_nome`, `cliente` (alias), contatos, `aparelho`, `aparelho_descricao`, `imei`, `problema_relatado`, `problema`, `servico`, `senha_aparelho`, `tecnico`, valores orçados/finais, `status`, datas (`data_entrada`, `data_entrega`), `observacoes`, `obs`, `proprietario_id`, timestamps + trigger para preencher aliases.
 
 8. **garantias** — `id`, `proprietario_id`, `os_id`, `cliente`, `telefone`, `aparelho`, `imei`, `servico`, `valor`, `data_entrega`, `data_validade`, `codigo`, dados da empresa, `obs`, `fotos text[]`, timestamps.
 
@@ -38,8 +39,8 @@ Este documento consolida todos os requisitos de banco levantados no frontend. El
 
 ## Funções / RPCs
 
-- `faturamento_diario(loja uuid)` — soma `vendas.total_liquido` por dia (últimos 7 dias, ajustável) respeitando `proprietario_id`.
-- `top_produtos(loja uuid, limite int)` — agrega `itens_venda.quantidade` por produto.
+- `faturamento_diario(proprietario uuid)` — soma `vendas.total_liquido` por dia (últimos 7 dias, ajustável) respeitando `proprietario_id`.
+- `top_produtos(proprietario uuid, limite int)` — agrega `itens_venda.quantidade` por produto.
 - `decrementar_estoque(produto uuid, quantidade int)` — atualiza estoque garantindo que não fique negativo; usada após cada venda.
 - Triggers auxiliares para sincronizar timestamps duplos e popular aliases (`cliente`/`obs`, etc.).
 

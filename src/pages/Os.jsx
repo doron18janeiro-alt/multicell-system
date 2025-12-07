@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ClipboardList, Filter, Plus, Printer, Share2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import OsForm from "../components/OsForm";
 import TermoGarantia from "../components/TermoGarantia";
@@ -8,6 +9,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
 import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
+import PrimeCard from "../components/ui/PrimeCard";
+import PrimeButton from "../components/ui/PrimeButton";
+import PrimeInput from "../components/ui/PrimeInput";
+import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
 
 const statusDictionary = {
   aberta: {
@@ -266,91 +271,79 @@ export default function OsPage() {
 
   if (authLoading) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+      <PrimeCard className="text-sm text-white/70">
         Validando sessão...
-      </div>
+      </PrimeCard>
     );
   }
 
   if (!proprietarioId) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+      <PrimeCard className="text-sm text-white/70">
         Faça login para gerenciar as ordens de serviço.
-      </div>
+      </PrimeCard>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-500">
-            Operações
-          </p>
-          <h1 className="text-3xl font-black text-white">Ordens de Serviço</h1>
-          <p className="text-slate-400">
-            Controle completo de cada aparelho recebido na assistência.
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <PrimeSectionTitle
+          title="Ordens de serviço"
+          subtitle="Controle completo de cada aparelho recebido, do check-in à entrega."
+          icon={ClipboardList}
+          className="flex-1"
+        />
+        <PrimeButton onClick={handleNew} className="self-start lg:self-auto">
+          <Plus size={18} /> Nova OS
+        </PrimeButton>
+      </div>
+
+      <PrimeCard className="space-y-6">
+        <div className="flex items-center gap-3 text-[#cdb88d]">
+          <Filter size={18} />
+          <p className="text-xs uppercase tracking-[0.4em] text-white/60">
+            Filtros inteligentes
           </p>
         </div>
-        <button
-          onClick={handleNew}
-          className="self-start inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-lg shadow-indigo-900/50"
-        >
-          <span className="text-xl">+</span>
-          Nova OS
-        </button>
-      </header>
-
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 md:p-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-slate-400">
-              Buscar
-            </label>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-100 focus:ring-2 focus:ring-indigo-500"
-              placeholder="Cliente, aparelho ou IMEI"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-slate-400">
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-100"
-            >
-              {statusFilters.map((filter) => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <PrimeInput
+            label="Buscar"
+            placeholder="Cliente, aparelho ou IMEI"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <PrimeInput
+            as="select"
+            label="Status"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+          >
+            {statusFilters.map((filter) => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </PrimeInput>
         </div>
         {feedback && (
-          <div className="mt-4 rounded-xl border border-rose-700 bg-rose-900/40 px-4 py-2 text-sm text-rose-100">
+          <PrimeCard className="border-red-400/40 bg-red-900/40 text-red-100">
             {feedback}
-          </div>
+          </PrimeCard>
         )}
-      </section>
+      </PrimeCard>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-900/60">
+      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+        <PrimeCard className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-slate-400">
-                <tr className="border-b border-slate-800/80">
-                  <th className="px-4 py-3 font-semibold">
-                    Cliente / Aparelho
-                  </th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Valor orçado</th>
-                  <th className="px-4 py-3 font-semibold">Entrada</th>
-                  <th className="px-4 py-3" />
+            <table className="table-premium w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="px-4">Cliente / Aparelho</th>
+                  <th>Status</th>
+                  <th>Valor orçado</th>
+                  <th>Entrada</th>
+                  <th className="text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -358,64 +351,63 @@ export default function OsPage() {
                   const badge =
                     statusDictionary[os.status] || statusDictionary.aberta;
                   return (
-                    <tr
-                      key={os.id}
-                      className="border-b border-slate-800/60 hover:bg-slate-900/80"
-                    >
-                      <td className="px-4 py-3">
+                    <tr key={os.id}>
+                      <td className="px-4">
                         <p className="font-semibold text-white">
                           {os.cliente_nome}
                         </p>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-white/60">
                           {os.aparelho || "-"}
                         </p>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <span
                           className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${badge.badge}`}
                         >
                           {badge.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-100">
+                      <td className="text-[#ffe8a3]">
                         {formatCurrency(os.valor_orcado)}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">
+                      <td className="text-white/70">
                         {formatDate(os.data_entrada)}
                       </td>
-                      <td className="px-4 py-3 text-right space-x-2">
-                        <button
-                          className="text-xs rounded-lg border border-slate-700 px-3 py-1 text-slate-200 hover:bg-slate-800"
-                          onClick={() => setSelected(os)}
-                        >
-                          Ver detalhes
-                        </button>
-                        <button
-                          className="text-xs rounded-lg border border-amber-600 px-3 py-1 text-amber-200 hover:bg-amber-600/20"
-                          onClick={() => navigate(`/os/${os.id}`)}
-                        >
-                          Fotos
-                        </button>
-                        <button
-                          className="text-xs rounded-lg border border-indigo-600 px-3 py-1 text-indigo-200 hover:bg-indigo-600/20"
-                          onClick={() => handleEdit(os)}
-                        >
-                          Editar
-                        </button>
-                        {os.status === "concluida" && (
+                      <td>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
                           <button
-                            className="text-xs rounded-lg border border-emerald-600 px-3 py-1 text-emerald-200 hover:bg-emerald-600/20"
-                            onClick={() => handleOpenTermo(os)}
+                            className="rounded-2xl border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80 hover:border-white/40"
+                            onClick={() => setSelected(os)}
                           >
-                            Termo de Garantia
+                            Ver detalhes
                           </button>
-                        )}
-                        <button
-                          className="text-xs rounded-lg border border-rose-700 px-3 py-1 text-rose-200 hover:bg-rose-900/30"
-                          onClick={() => handleDelete(os)}
-                        >
-                          Excluir
-                        </button>
+                          <button
+                            className="rounded-2xl border border-[#ffe8a3]/40 bg-white/5 px-3 py-1 text-xs text-[#ffe8a3] hover:border-[#ffe8a3]/80"
+                            onClick={() => navigate(`/os/${os.id}`)}
+                          >
+                            Fotos
+                          </button>
+                          <button
+                            className="rounded-2xl border border-[#8f5eff]/40 bg-white/5 px-3 py-1 text-xs text-[#c6b5ff] hover:border-[#8f5eff]/80"
+                            onClick={() => handleEdit(os)}
+                          >
+                            Editar
+                          </button>
+                          {os.status === "concluida" && (
+                            <button
+                              className="rounded-2xl border border-emerald-500/40 bg-white/5 px-3 py-1 text-xs text-emerald-200 hover:border-emerald-400/80"
+                              onClick={() => handleOpenTermo(os)}
+                            >
+                              Termo
+                            </button>
+                          )}
+                          <button
+                            className="rounded-2xl border border-red-500/40 bg-white/5 px-3 py-1 text-xs text-red-200 hover:border-red-400/80"
+                            onClick={() => handleDelete(os)}
+                          >
+                            Excluir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -424,21 +416,21 @@ export default function OsPage() {
             </table>
           </div>
           {emptyMessage && (
-            <p className="px-4 py-6 text-center text-sm text-slate-400">
+            <p className="px-6 py-5 text-center text-sm text-white/60">
               {emptyMessage}
             </p>
           )}
-        </section>
+        </PrimeCard>
 
-        <aside className="space-y-6">
+        <div className="space-y-6">
           {openForm && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-              <div className="flex items-start justify-between">
+            <PrimeCard>
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-slate-500">
+                  <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
                     {editingOs ? "Editar OS" : "Nova OS"}
                   </p>
-                  <h2 className="text-xl font-semibold text-white">
+                  <h2 className="text-2xl font-semibold text-white">
                     {editingOs ? editingOs.cliente_nome : "Cadastro"}
                   </h2>
                 </div>
@@ -447,9 +439,9 @@ export default function OsPage() {
                     setOpenForm(false);
                     setEditingOs(null);
                   }}
-                  className="text-slate-400 hover:text-white"
+                  className="rounded-full border border-white/10 p-2 text-white/60 hover:border-white/40"
                 >
-                  ✕
+                  <X size={16} />
                 </button>
               </div>
               <div className="mt-4">
@@ -463,78 +455,70 @@ export default function OsPage() {
                   loading={saving}
                 />
               </div>
-            </div>
+            </PrimeCard>
           )}
 
           {selected && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-slate-500">
-                    Detalhes
-                  </p>
-                  <h2 className="text-xl font-semibold text-white">
+            <PrimeCard className="space-y-5">
+              <div className="flex flex-col gap-3">
+                <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
+                  Detalhes
+                </p>
+                <div className="flex flex-col gap-3">
+                  <h2 className="text-2xl font-semibold text-white">
                     {selected.cliente_nome}
                   </h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="btn-gold" onClick={handleImprimirOs}>
-                    Imprimir OS
-                  </button>
-                  <button
-                    className="btn-gold btn-ghost"
-                    onClick={handleCompartilharOsWhatsapp}
-                  >
-                    Enviar OS no WhatsApp
-                  </button>
-                  <button
-                    className="text-slate-500"
-                    onClick={() => setSelected(null)}
-                  >
-                    Fechar
-                  </button>
+                  <div className="flex flex-wrap gap-3">
+                    <PrimeButton variant="ghost" onClick={handleImprimirOs}>
+                      <Printer size={16} /> Imprimir
+                    </PrimeButton>
+                    <PrimeButton
+                      variant="ghost"
+                      onClick={handleCompartilharOsWhatsapp}
+                    >
+                      <Share2 size={16} /> WhatsApp
+                    </PrimeButton>
+                    <button
+                      className="rounded-2xl border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70"
+                      onClick={() => setSelected(null)}
+                    >
+                      Fechar
+                    </button>
+                  </div>
                 </div>
               </div>
               <div
                 id="os-print-area"
-                className="mt-4 space-y-3 text-sm text-slate-200"
+                className="space-y-3 text-sm text-white/80"
               >
                 <dl className="space-y-3">
-                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                    <dt className="text-slate-400">Aparelho</dt>
-                    <dd className="text-right">{selected.aparelho || "-"}</dd>
+                  <div className="grid grid-cols-2 items-center border-b border-white/10 pb-2 text-right">
+                    <dt className="text-left text-white/60">Aparelho</dt>
+                    <dd>{selected.aparelho || "-"}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                    <dt className="text-slate-400">IMEI</dt>
-                    <dd className="text-right">{selected.imei || "-"}</dd>
+                  <div className="grid grid-cols-2 items-center border-b border-white/10 pb-2 text-right">
+                    <dt className="text-left text-white/60">IMEI</dt>
+                    <dd>{selected.imei || "-"}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                    <dt className="text-slate-400">Problema</dt>
-                    <dd className="text-right text-slate-100">
-                      {selected.problema_relatado}
-                    </dd>
+                  <div className="grid grid-cols-2 items-center border-b border-white/10 pb-2 text-right">
+                    <dt className="text-left text-white/60">Problema</dt>
+                    <dd>{selected.problema_relatado}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                    <dt className="text-slate-400">Senha</dt>
-                    <dd className="text-right">
-                      {selected.senha_aparelho || "—"}
-                    </dd>
+                  <div className="grid grid-cols-2 items-center border-b border-white/10 pb-2 text-right">
+                    <dt className="text-left text-white/60">Senha</dt>
+                    <dd>{selected.senha_aparelho || "—"}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                    <dt className="text-slate-400">Observações</dt>
-                    <dd className="text-right text-slate-100">
-                      {selected.observacoes || "Sem observações"}
-                    </dd>
+                  <div className="grid grid-cols-2 items-center border-b border-white/10 pb-2 text-right">
+                    <dt className="text-left text-white/60">Observações</dt>
+                    <dd>{selected.observacoes || "Sem observações"}</dd>
                   </div>
-                  <div className="flex justify-between gap-4 border-b border-slate-800 pb-2">
-                    <dt className="text-slate-400">Valor final</dt>
-                    <dd className="text-right">
-                      {formatCurrency(selected.valor_final)}
-                    </dd>
+                  <div className="grid grid-cols-2 items-center border-b border-white/10 pb-2 text-right">
+                    <dt className="text-left text-white/60">Valor final</dt>
+                    <dd>{formatCurrency(selected.valor_final)}</dd>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-slate-400">Entrega</dt>
-                    <dd className="text-right">
+                  <div className="grid grid-cols-2 items-center text-right">
+                    <dt className="text-left text-white/60">Entrega</dt>
+                    <dd>
                       {selected.data_entrega
                         ? formatDate(selected.data_entrega)
                         : "—"}
@@ -543,40 +527,42 @@ export default function OsPage() {
                 </dl>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
+              <PrimeCard className="border-white/5 bg-white/5">
                 <h3 className="text-lg font-semibold text-white">
                   Fotos da ordem de serviço
                 </h3>
-                <p className="text-sm text-slate-400">
-                  Registre o estado do aparelho antes e depois do serviço para
-                  manter o histórico visual vinculado à OS.
+                <p className="text-sm text-white/70">
+                  Registre o estado do aparelho antes e depois para manter o
+                  histórico visual.
                 </p>
-                <FileUploader
-                  entidade="os"
-                  entidadeId={selected.id}
-                  onUploaded={(lista) => {
-                    setFotosOs(lista || []);
-                    setGalleryKey((prev) => prev + 1);
-                  }}
-                />
-                <FileGallery
-                  key={`${selected.id}-${galleryKey}`}
-                  entidade="os"
-                  entidadeId={selected.id}
-                  allowDelete
-                  onChange={(lista) => setFotosOs(lista || [])}
-                />
-              </div>
-            </div>
+                <div className="mt-4 space-y-4">
+                  <FileUploader
+                    entidade="os"
+                    entidadeId={selected.id}
+                    onUploaded={(lista) => {
+                      setFotosOs(lista || []);
+                      setGalleryKey((prev) => prev + 1);
+                    }}
+                  />
+                  <FileGallery
+                    key={`${selected.id}-${galleryKey}`}
+                    entidade="os"
+                    entidadeId={selected.id}
+                    allowDelete
+                    onChange={(lista) => setFotosOs(lista || [])}
+                  />
+                </div>
+              </PrimeCard>
+            </PrimeCard>
           )}
 
           {!openForm && !selected && (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-5 text-center text-sm text-slate-400">
-              Selecione uma OS para ver detalhes ou clique em "Nova OS" para
+            <PrimeCard className="border-dashed border-white/20 bg-transparent text-center text-sm text-white/60">
+              Selecione uma OS para ver detalhes ou clique em “Nova OS” para
               cadastrar.
-            </div>
+            </PrimeCard>
           )}
-        </aside>
+        </div>
       </div>
 
       {termOs && (

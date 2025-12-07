@@ -1,1 +1,1 @@
-export { default } from "./TelaVendas";
+export { default } from "./TelaVendasNova";

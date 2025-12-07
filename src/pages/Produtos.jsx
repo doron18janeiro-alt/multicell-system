@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, ShoppingBag } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import useProdutos from "../hooks/useProdutos";
 import ProdutosModal from "../components/ProdutosModal";
 import { removerProduto } from "../services/produtosService";
 import { money } from "../utils/money";
+import PrimeCard from "../components/ui/PrimeCard";
+import PrimeButton from "../components/ui/PrimeButton";
+import PrimeInput from "../components/ui/PrimeInput";
+import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
 
 export default function Produtos() {
   const { proprietarioId, loading: authLoading } = useAuth();
@@ -69,131 +73,121 @@ export default function Produtos() {
 
   if (authLoading) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
+      <PrimeCard className="text-sm text-white/70">
         Validando sessão...
-      </div>
+      </PrimeCard>
     );
   }
 
   if (!proprietarioId) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
+      <PrimeCard className="text-sm text-white/70">
         Faça login para gerenciar seus produtos.
-      </div>
+      </PrimeCard>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <p className="text-sm uppercase tracking-[0.4em] text-gray-500">
-          Catálogo
-        </p>
-        <h1 className="text-3xl font-bold text-gray-900">Produtos</h1>
-        <p className="text-gray-500">
-          Gerencie itens, preços e estoque com integração direta ao Supabase.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PrimeSectionTitle
+        title="Curadoria de produtos"
+        subtitle="Gerencie itens, preços e estoque com o toque dourado do Prime Edition."
+        icon={ShoppingBag}
+      />
 
       {erro && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <PrimeCard className="border-red-400/30 bg-red-900/30 text-red-100">
           {erro}
-        </div>
+        </PrimeCard>
       )}
 
       {feedback && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <PrimeCard className="border-red-400/30 bg-red-900/30 text-red-100">
           {feedback}
-        </div>
+        </PrimeCard>
       )}
 
-      <div className="flex items-center gap-3">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Buscar por nome, código ou categoria"
-            className="pl-10 pr-3 py-2 w-full border rounded-md"
+      <PrimeCard className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="w-full max-w-xl">
+          <PrimeInput
+            label="Buscar produtos"
+            placeholder="Nome, código ou categoria"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
         </div>
+        <PrimeButton onClick={abrirNovo} className="self-stretch md:self-auto">
+          <Plus size={16} /> Novo produto
+        </PrimeButton>
+      </PrimeCard>
 
-        <button
-          onClick={abrirNovo}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2"
-        >
-          <Plus size={18} /> Novo
-        </button>
-      </div>
-
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-100 text-left text-sm text-gray-500">
-            <tr>
-              <th className="p-3">Nome</th>
-              <th className="p-3">Categoria</th>
-              <th className="p-3">Preço</th>
-              <th className="p-3">Estoque</th>
-              <th className="p-3 w-32">Ações</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {produtosFiltrados.map((p) => (
-              <tr key={p.id} className="border-t">
-                <td className="p-3">
-                  <p className="font-semibold text-gray-900">{p.nome}</p>
-                  <p className="text-xs text-gray-500">{p.codigo || "—"}</p>
-                </td>
-                <td className="p-3 text-sm text-gray-600">
-                  {p.categoria || "—"}
-                </td>
-                <td className="p-3 text-sm text-gray-800">
-                  {money(p.preco_venda || p.preco || 0)}
-                </td>
-                <td className="p-3 text-sm text-gray-800">
-                  {p.quantidade ?? p.estoque ?? 0}
-                </td>
-                <td className="p-3 flex gap-3">
-                  <button onClick={() => editar(p)} title="Editar">
-                    <Pencil size={18} className="text-blue-600" />
-                  </button>
-
-                  <button
-                    onClick={() => excluir(p)}
-                    title="Excluir"
-                    disabled={excluindoId === p.id}
-                  >
-                    <Trash2
-                      size={18}
-                      className={
-                        excluindoId === p.id ? "text-gray-400" : "text-red-600"
-                      }
-                    />
-                  </button>
-                </td>
-              </tr>
-            ))}
-
-            {!carregando && produtosFiltrados.length === 0 && (
+      <PrimeCard className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table-premium w-full">
+            <thead>
               <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">
-                  Nenhum produto encontrado.
-                </td>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Preço</th>
+                <th>Estoque</th>
+                <th className="text-right">Ações</th>
               </tr>
-            )}
+            </thead>
+            <tbody>
+              {produtosFiltrados.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <div className="font-semibold text-white">{p.nome}</div>
+                    <p className="text-xs text-white/50">{p.codigo || "—"}</p>
+                  </td>
+                  <td className="text-white/80">{p.categoria || "—"}</td>
+                  <td className="text-[#ffe8a3] font-semibold">
+                    {money(p.preco_venda || p.preco || 0)}
+                  </td>
+                  <td className="text-white/90">
+                    {p.quantidade ?? p.estoque ?? 0}
+                  </td>
+                  <td>
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => editar(p)}
+                        title="Editar"
+                        className="rounded-2xl border border-white/15 bg-white/10 p-2 text-[#ffe8a3] transition hover:border-[#ffe8a3]/60"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        onClick={() => excluir(p)}
+                        title="Excluir"
+                        disabled={excluindoId === p.id}
+                        className="rounded-2xl border border-white/15 bg-white/10 p-2 text-red-300 transition hover:border-red-300/60 disabled:opacity-50"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
 
-            {carregando && (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">
-                  Carregando produtos...
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              {!carregando && produtosFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-white/60">
+                    Nenhum produto encontrado.
+                  </td>
+                </tr>
+              )}
+
+              {carregando && (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-white/60">
+                    Carregando produtos...
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </PrimeCard>
 
       {modalAberto && (
         <ProdutosModal

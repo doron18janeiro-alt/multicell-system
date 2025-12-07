@@ -1,0 +1,1 @@
+-- Migração intencionalmente vazia após padronização para proprietario_id.

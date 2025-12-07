@@ -39,7 +39,7 @@ serve(async (req) => {
 
     // Consulta a mesma função RPC utilizada no frontend.
     const { data, error } = await supabase.rpc("faturamento_diario", {
-      loja: proprietarioId,
+      proprietario: proprietarioId,
     });
 
     if (error) {

@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { DollarSign, Plus, Printer, Share2, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
   createVenda,
   getVendaDetalhe,
+  getResumoVendas,
   listVendas,
 } from "../services/caixaService";
 import { imprimir, modeloCupomVenda, printElementById } from "../utils/print";
@@ -10,6 +12,10 @@ import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
 import { gerarCupom } from "../utils/cupom";
 import { gerarPix } from "../utils/pix";
+import PrimeCard from "../components/ui/PrimeCard";
+import PrimeButton from "../components/ui/PrimeButton";
+import PrimeInput from "../components/ui/PrimeInput";
+import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
 
 const paymentOptions = [
   { value: "dinheiro", label: "Dinheiro" },
@@ -65,6 +71,45 @@ const formatDateTime = (iso) => {
     minute: "2-digit",
   });
 };
+
+const toISODate = (value, endOfDay = false) => {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  if (endOfDay) {
+    date.setHours(23, 59, 59, 999);
+  }
+  return date.toISOString();
+};
+
+const sanitizeDecimal = (value, fallback = 0) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Number(parsed.toFixed(2));
+};
+
+const paymentSummaryStyles = {
+  dinheiro: "border-emerald-500/30 bg-emerald-500/10 text-emerald-100",
+  cartao: "border-indigo-500/30 bg-indigo-500/10 text-indigo-100",
+  pix: "border-cyan-500/30 bg-cyan-500/10 text-cyan-100",
+  outro: "border-slate-500/30 bg-slate-500/10 text-slate-200",
+};
+
+const RESUMO_INICIAL = {
+  total: 0,
+  quantidade: 0,
+  porPagamento: {
+    dinheiro: 0,
+    cartao: 0,
+    pix: 0,
+    outro: 0,
+  },
+};
+
+const generateTempId = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const defaultCabecalho = () => ({
   data: toDateTimeInput(new Date()),
@@ -228,350 +273,490 @@ export default function Caixa() {
   const [formMessage, setFormMessage] = useState(null);
   const [cupomPreview, setCupomPreview] = useState("");
   const [pixPreview, setPixPreview] = useState(null);
+  const [resumo, setResumo] = useState(RESUMO_INICIAL);
+  const [loadingResumo, setLoadingResumo] = useState(false);
 
-  const handlePrintCupom = () => {
-    printElementById("cupom-print-area", "Cupom de Venda");
-  };
+  const periodoFiltro = useMemo(
+    () => ({
+      inicial: toISODate(filters.dataInicial),
+      final: toISODate(filters.dataFinal, true),
+    }),
+    [filters]
+  );
 
-  const handlePrintTermico = () => {
-    if (!selectedVenda) return;
-    const payload = montarCupomFromDetalhe(selectedVenda);
-    if (!payload) return;
-    const qrUrl = selectedVenda?.venda?.id
-      ? `${window.location.origin}/vendas/${selectedVenda.venda.id}`
-      : undefined;
-    imprimir(PRINTER_IP, modeloCupomVenda(payload), { qrUrl });
-  };
+  const totalVenda = useMemo(
+    () => itens.reduce((sum, item) => sum + Number(item.subtotal || 0), 0),
+    [itens]
+  );
 
-  const handleImprimirCupomHtml = () => {
+  const resumoPagamentoCards = useMemo(
+    () =>
+      paymentOptions.map((option) => ({
+        ...option,
+        valor: resumo?.porPagamento?.[option.value] || 0,
+      })),
+    [resumo]
+  );
+
+  const updatePixPreview = useCallback(async (vendaParaCupom) => {
+    if (!vendaParaCupom?.total) {
+      setPixPreview(null);
+      return;
+    }
+
+    try {
+      const pixData = await gerarPix(vendaParaCupom.total, {
+        chavePix: PIX_CHAVE,
+        descricao: vendaParaCupom.cliente_nome || "Venda Multicell",
+      });
+      setPixPreview({ ...pixData, valor: Number(vendaParaCupom.total) });
+    } catch (pixError) {
+      console.error("[Caixa] Falha ao gerar QR Code PIX", pixError);
+      setPixPreview(null);
+    }
+  }, []);
+
+  const carregarVendas = useCallback(async () => {
+    if (!proprietarioId) return;
+    setLoadingList(true);
+    setListError("");
+    try {
+      const { data, error } = await listVendas(proprietarioId, {
+        dataInicial: periodoFiltro.inicial,
+        dataFinal: periodoFiltro.final,
+      });
+      if (error) throw error;
+      setVendas(data);
+    } catch (error) {
+      console.error("[Caixa] Falha ao carregar vendas", error);
+      setListError(
+        error?.message || "Não foi possível carregar as vendas do período."
+      );
+      setVendas([]);
+    } finally {
+      setLoadingList(false);
+    }
+  }, [periodoFiltro, proprietarioId]);
+
+  const carregarResumo = useCallback(async () => {
+    if (!proprietarioId) return;
+    setLoadingResumo(true);
+    try {
+      const { data, error } = await getResumoVendas(proprietarioId, {
+        dataInicial: periodoFiltro.inicial,
+        dataFinal: periodoFiltro.final,
+      });
+      if (error) throw error;
+      setResumo(data);
+    } catch (error) {
+      console.error("[Caixa] Falha ao gerar resumo", error);
+      setResumo(RESUMO_INICIAL);
+    } finally {
+      setLoadingResumo(false);
+    }
+  }, [periodoFiltro, proprietarioId]);
+
+  useEffect(() => {
+    carregarVendas();
+    carregarResumo();
+  }, [carregarResumo, carregarVendas]);
+
+  useEffect(() => {
+    const syncPix = async () => {
+      if (drawerOpen) {
+        await updatePixPreview({
+          total: totalVenda,
+          cliente_nome: cabecalho.cliente_nome,
+        });
+        return;
+      }
+
+      if (selectedVenda) {
+        await updatePixPreview({
+          total: selectedVenda.venda?.total,
+          cliente_nome: selectedVenda.venda?.cliente_nome,
+        });
+        return;
+      }
+
+      setPixPreview(null);
+    };
+
+    syncPix().catch((error) =>
+      console.error("[Caixa] Falha ao sincronizar pré-visualização PIX", error)
+    );
+  }, [
+    cabecalho.cliente_nome,
+    drawerOpen,
+    selectedVenda,
+    totalVenda,
+    updatePixPreview,
+  ]);
+
+  const handleOpenDrawer = useCallback(() => {
+    setDrawerOpen(true);
+    setFormStep(1);
+    setCabecalho(defaultCabecalho());
+    setItens([]);
+    setItemDraft(emptyItem());
+    setFormMessage(null);
+  }, []);
+
+  const handleAddItem = useCallback(() => {
+    const descricao = itemDraft.descricao?.trim();
+    if (!descricao) {
+      setFormMessage({
+        type: "error",
+        text: "Informe a descrição do item antes de adicioná-lo.",
+      });
+      return;
+    }
+
+    const quantidade = Math.max(1, Number(itemDraft.quantidade) || 1);
+    const precoUnitario = Math.max(0, Number(itemDraft.preco_unitario) || 0);
+
+    if (!precoUnitario) {
+      setFormMessage({
+        type: "error",
+        text: "Informe o preço unitário do item.",
+      });
+      return;
+    }
+
+    const subtotal = sanitizeDecimal(quantidade * precoUnitario);
+
+    setItens((prev) => [
+      ...prev,
+      {
+        id: generateTempId(),
+        descricao,
+        quantidade,
+        preco_unitario: Number(precoUnitario.toFixed(2)),
+        subtotal,
+      },
+    ]);
+    setItemDraft(emptyItem());
+    setFormMessage(null);
+  }, [itemDraft]);
+
+  const handleRemoveItem = useCallback((id) => {
+    setItens((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const handleSelectVenda = useCallback(
+    async (venda) => {
+      if (!venda?.id) return;
+      setLoadingDetalhe(true);
+      setSelectedVenda(null);
+
+      try {
+        const { data, error } = await getVendaDetalhe(venda.id, proprietarioId);
+        if (error) throw error;
+        setSelectedVenda(data);
+        const cupom = montarCupomFromDetalhe(data);
+        if (cupom) {
+          setCupomPreview(modeloCupomVenda(cupom));
+        }
+      } catch (error) {
+        console.error("[Caixa] Falha ao carregar detalhes da venda", error);
+        setListError(
+          error?.message || "Não foi possível carregar os detalhes da venda."
+        );
+      } finally {
+        setLoadingDetalhe(false);
+      }
+    },
+    [proprietarioId]
+  );
+
+  const handlePrintCupom = useCallback(() => {
     if (!selectedVenda) {
-      alert("Selecione uma venda para imprimir.");
+      alert("Selecione uma venda para imprimir o cupom.");
+      return;
+    }
+    printElementById("cupom-print-area");
+  }, [selectedVenda]);
+
+  const handlePrintTermico = useCallback(async () => {
+    if (!selectedVenda) {
+      alert("Selecione uma venda para enviar à impressora térmica.");
+      return;
+    }
+
+    const cupom = montarCupomFromDetalhe(selectedVenda);
+    if (!cupom) return;
+
+    const texto = modeloCupomVenda(cupom);
+    await imprimir(PRINTER_IP, texto, { qrUrl: pixPreview?.payload });
+  }, [pixPreview?.payload, selectedVenda]);
+
+  const handleImprimirCupomHtml = useCallback(() => {
+    if (!selectedVenda) {
+      alert("Selecione uma venda para gerar o cupom em PDF.");
       return;
     }
     const html = gerarHtmlCupomVenda(selectedVenda.venda, selectedVenda.itens);
     imprimirHtmlEmNovaJanela({
-      titulo: "Cupom de venda",
+      titulo: `Cupom da venda #${selectedVenda.venda.id}`,
       conteudoHtml: html,
     });
-  };
+  }, [selectedVenda]);
 
-  const handleEnviarVendaWhatsapp = () => {
+  const handleEnviarVendaWhatsapp = useCallback(() => {
     if (!selectedVenda) {
-      alert("Selecione uma venda para enviar pelo WhatsApp.");
+      alert("Selecione uma venda para compartilhar.");
+      return;
+    }
+    const cupom = montarCupomFromDetalhe(selectedVenda);
+    if (!cupom) return;
+    compartilharWhatsApp({ mensagem: modeloCupomVenda(cupom) });
+  }, [selectedVenda]);
+
+  const enviarCupomBluetoothPlaceholder = useCallback((texto) => {
+    if (!texto) {
+      alert("Gere um cupom antes de enviar via Bluetooth.");
       return;
     }
 
-    const telefone =
-      selectedVenda.venda?.telefone_cliente ||
-      selectedVenda.venda?.cliente_telefone ||
-      "";
-    const telefoneLimpo = telefone ? telefone.replace(/\D/g, "") : "";
-    const pagamentoLabel =
-      paymentOptions.find(
-        (option) => option.value === selectedVenda.venda?.forma_pagamento
-      )?.label || "Pagamento";
-    const msg = `Olá, ${
-      selectedVenda.venda?.cliente_nome || "cliente"
-    }! Segue o comprovante da venda #${
-      selectedVenda.venda?.id || "-"
-    } no valor de ${formatCurrency(
-      selectedVenda.venda?.total
-    )} pago via ${pagamentoLabel} em ${formatDateTime(
-      selectedVenda.venda?.data
-    )}. Obrigado pela preferência!`;
-
-    compartilharWhatsApp({
-      telefone: telefoneLimpo || undefined,
-      mensagem: msg,
-    });
-  };
-
-  function enviarCupomBluetoothPlaceholder(texto) {
-    if (!texto) return;
-    console.info("[Caixa] Cupom pronto para impressão Bluetooth:", texto);
-    // Em React Native, substituir o console.log por BluetoothEscposPrinter.printText
-    // ou integração equivalente para enviar o cupom diretamente para a impressora.
-  }
-
-  useEffect(() => {
-    if (!proprietarioId) return;
-    loadVendas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.dataInicial, filters.dataFinal, proprietarioId]);
-
-  async function loadVendas() {
-    if (!proprietarioId) return;
-    setLoadingList(true);
-    setListError("");
-    const payload = {
-      dataInicial: filters.dataInicial
-        ? new Date(`${filters.dataInicial}T00:00:00`).toISOString()
-        : undefined,
-      dataFinal: filters.dataFinal
-        ? new Date(`${filters.dataFinal}T23:59:59`).toISOString()
-        : undefined,
-    };
-    const { data, error } = await listVendas(proprietarioId, payload);
-    if (error) {
-      setListError(error.message || "Não foi possível carregar as vendas.");
-    }
-    setVendas(data || []);
-    setLoadingList(false);
-  }
-
-  async function handleSelectVenda(venda) {
-    if (!proprietarioId) return;
-    setSelectedVenda(null);
-    setLoadingDetalhe(true);
-    const { data, error } = await getVendaDetalhe(venda.id, proprietarioId);
-    setLoadingDetalhe(false);
-    if (error) {
-      setListError(error.message || "Falha ao carregar detalhes da venda.");
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(texto)
+        .then(() =>
+          alert(
+            "Copiamos o cupom para a área de transferência. Cole no app móvel para imprimir via Bluetooth."
+          )
+        )
+        .catch(() =>
+          alert(
+            "Copie manualmente o texto do cupom e utilize o aplicativo móvel para impressão Bluetooth."
+          )
+        );
       return;
     }
-    setSelectedVenda(data);
-  }
 
-  function resetForm() {
-    setCabecalho(defaultCabecalho());
-    setItens([]);
-    setItemDraft(emptyItem());
-    setFormStep(1);
-    setFormMessage(null);
-  }
+    alert(texto);
+  }, []);
 
-  function handleOpenDrawer() {
-    resetForm();
-    setDrawerOpen(true);
-  }
-
-  const totalVenda = useMemo(
-    () => itens.reduce((sum, item) => sum + item.subtotal, 0),
-    [itens]
-  );
-
-  function handleAddItem() {
-    const quantidade = Number(itemDraft.quantidade);
-    const preco = Number(itemDraft.preco_unitario);
-    if (!itemDraft.descricao.trim() || !quantidade || !preco) {
+  const handleSaveVenda = useCallback(async () => {
+    if (!proprietarioId) return;
+    if (!itens.length) {
       setFormMessage({
         type: "error",
-        text: "Informe descrição, quantidade e preço para adicionar o item.",
+        text: "Adicione ao menos um item antes de salvar a venda.",
       });
       return;
     }
-    const novoItem = {
-      id: crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`,
-      descricao: itemDraft.descricao.trim(),
-      quantidade,
-      preco_unitario: preco,
-      subtotal: Number((quantidade * preco).toFixed(2)),
-    };
-    setItens((prev) => [...prev, novoItem]);
-    setItemDraft(emptyItem());
-    setFormMessage(null);
-  }
 
-  function handleRemoveItem(id) {
-    setItens((prev) => prev.filter((item) => item.id !== id));
-  }
-
-  async function handleSaveVenda() {
-    if (!proprietarioId) {
-      setFormMessage({ type: "error", text: "Faça login novamente." });
-      return;
-    }
-    if (!itens.length) {
-      setFormMessage({ type: "error", text: "Adicione ao menos um item." });
-      return;
-    }
     setSaving(true);
     setFormMessage(null);
-    const payload = {
-      cabecalho: {
-        ...cabecalho,
-        data: cabecalho.data
-          ? new Date(cabecalho.data).toISOString()
-          : new Date().toISOString(),
-      },
-      itens: itens.map((item) => ({
-        descricao: item.descricao,
-        quantidade: item.quantidade,
-        preco_unitario: item.preco_unitario,
-        subtotal: item.subtotal,
-      })),
+
+    const cabecalhoPayload = {
+      ...cabecalho,
+      data: cabecalho.data
+        ? new Date(cabecalho.data).toISOString()
+        : new Date().toISOString(),
     };
-    const { data: vendaRegistrada, error } = await createVenda(
-      proprietarioId,
-      payload
-    );
-    setSaving(false);
-    if (error) {
+
+    const itensPayload = itens.map((item) => ({
+      descricao: item.descricao,
+      quantidade: Number(item.quantidade) || 1,
+      preco_unitario: Number(item.preco_unitario) || 0,
+      subtotal: item.subtotal,
+    }));
+
+    try {
+      const { data, error } = await createVenda(proprietarioId, {
+        cabecalho: cabecalhoPayload,
+        itens: itensPayload,
+      });
+      if (error) throw error;
+      if (!data?.venda) {
+        throw new Error("Retorno inesperado do servidor ao salvar a venda.");
+      }
+
+      const cupom = montarCupomFromDetalhe({
+        venda: data.venda,
+        itens: data.itens,
+      });
+      if (cupom) {
+        setCupomPreview(modeloCupomVenda(cupom));
+      }
+      setSelectedVenda(data);
+      setFormMessage({
+        type: "success",
+        text: "Venda registrada com sucesso! Você já pode iniciar outra.",
+      });
+      setCabecalho(defaultCabecalho());
+      setItens([]);
+      setItemDraft(emptyItem());
+      setFormStep(1);
+      await carregarVendas();
+      await carregarResumo();
+    } catch (error) {
+      console.error("[Caixa] Falha ao salvar venda", error);
       setFormMessage({
         type: "error",
-        text: error.message || "Não foi possível salvar a venda.",
+        text: error?.message || "Não foi possível salvar a venda.",
       });
-      return;
+    } finally {
+      setSaving(false);
     }
-    setFormMessage({ type: "success", text: "Venda registrada com sucesso." });
-    if (AUTO_PRINT_VENDA) {
-      const modelo = montarCupomFromForm(cabecalho, itens);
-      imprimir(PRINTER_IP, modeloCupomVenda(modelo));
-    }
-    const vendaParaCupom = {
-      id: vendaRegistrada?.venda?.id || "-",
-      data: vendaRegistrada?.venda?.data || payload.cabecalho.data,
-      cliente_nome:
-        vendaRegistrada?.venda?.cliente_nome || payload.cabecalho.cliente_nome,
-      forma_pagamento:
-        vendaRegistrada?.venda?.forma_pagamento ||
-        payload.cabecalho.forma_pagamento,
-      total: vendaRegistrada?.venda?.total ?? totalVenda,
-      observacoes:
-        vendaRegistrada?.venda?.observacoes || payload.cabecalho.observacoes,
-    };
-    const itensParaCupom =
-      (vendaRegistrada?.itens?.length ? vendaRegistrada.itens : null) ||
-      payload.itens;
-    const cupomHtml = gerarHtmlCupomVenda(vendaParaCupom, itensParaCupom);
-    imprimirHtmlEmNovaJanela({
-      titulo: "Cupom de venda",
-      conteudoHtml: cupomHtml,
-    });
-    const cupomTexto = gerarCupom(vendaParaCupom, itensParaCupom);
-    setCupomPreview(cupomTexto);
-
-    if (
-      (vendaParaCupom.forma_pagamento || payload.cabecalho.forma_pagamento) ===
-      "pix"
-    ) {
-      try {
-        const pixData = await gerarPix(vendaParaCupom.total, {
-          chavePix: PIX_CHAVE,
-          descricao: vendaParaCupom.cliente_nome || "Venda Multicell",
-        });
-        setPixPreview({ ...pixData, valor: vendaParaCupom.total });
-      } catch (pixError) {
-        console.error("[Caixa] Falha ao gerar QR Code PIX", pixError);
-        setPixPreview(null);
-      }
-    } else {
-      setPixPreview(null);
-    }
-    loadVendas();
-    setTimeout(() => {
-      setDrawerOpen(false);
-      resetForm();
-    }, 600);
-  }
+  }, [cabecalho, carregarResumo, carregarVendas, itens, proprietarioId]);
 
   if (authLoading) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+      <PrimeCard className="text-sm text-white/70">
         Validando sessão...
-      </div>
+      </PrimeCard>
     );
   }
 
   if (!proprietarioId) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+      <PrimeCard className="text-sm text-white/70">
         Faça login para acessar o caixa.
-      </div>
+      </PrimeCard>
     );
   }
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.4em] text-slate-500">
-            Operações
-          </p>
-          <h1 className="text-3xl font-black text-white">Caixa & Vendas</h1>
-          <p className="text-slate-400">
-            Registre vendas rápidas e acompanhe o faturamento do período.
-          </p>
-        </div>
-        <button
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <PrimeSectionTitle
+          title="Caixa e vendas"
+          subtitle="Registre operações rápidas e monitore o faturamento em tempo real."
+          icon={DollarSign}
+          className="flex-1"
+        />
+        <PrimeButton
           onClick={handleOpenDrawer}
-          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950 shadow-lg shadow-emerald-900/50"
+          className="self-start lg:self-auto"
         >
-          <span className="text-xl">+</span>
-          Nova venda
-        </button>
-      </header>
+          <Plus size={18} /> Nova venda
+        </PrimeButton>
+      </div>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 md:p-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-slate-400">
-              Data inicial
-            </label>
-            <input
-              type="date"
-              value={filters.dataInicial}
-              onChange={(event) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  dataInicial: event.target.value,
-                }))
-              }
-              className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-100"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-slate-400">
-              Data final
-            </label>
-            <input
-              type="date"
-              value={filters.dataFinal}
-              onChange={(event) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  dataFinal: event.target.value,
-                }))
-              }
-              className="rounded-xl border border-slate-800 bg-slate-950/40 px-4 py-2 text-slate-100"
-            />
-          </div>
+      <PrimeCard className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <PrimeInput
+            label="Data inicial"
+            type="date"
+            value={filters.dataInicial}
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                dataInicial: event.target.value,
+              }))
+            }
+          />
+          <PrimeInput
+            label="Data final"
+            type="date"
+            value={filters.dataFinal}
+            onChange={(event) =>
+              setFilters((prev) => ({
+                ...prev,
+                dataFinal: event.target.value,
+              }))
+            }
+          />
         </div>
         {listError && (
-          <div className="mt-4 rounded-xl border border-rose-700 bg-rose-900/40 px-4 py-2 text-sm text-rose-100">
+          <PrimeCard className="border-red-400/40 bg-red-900/40 text-red-100">
             {listError}
-          </div>
+          </PrimeCard>
         )}
-      </section>
+      </PrimeCard>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-900/60">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <PrimeCard>
+          <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
+            Período selecionado
+          </p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {loadingResumo ? "--" : formatCurrency(resumo.total)}
+          </p>
+          <p className="text-xs text-white/60">
+            Receita bruta do intervalo filtrado
+          </p>
+        </PrimeCard>
+        <PrimeCard>
+          <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
+            Vendas registradas
+          </p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {loadingResumo ? "--" : resumo.quantidade}
+          </p>
+          <p className="text-xs text-white/60">
+            Número de operações realizadas
+          </p>
+        </PrimeCard>
+        <PrimeCard>
+          <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
+            Último filtro
+          </p>
+          <p className="mt-2 text-base font-semibold text-white">
+            {filters.dataInicial} → {filters.dataFinal}
+          </p>
+          <p className="text-xs text-white/60">
+            Ajuste as datas para refinar o painel
+          </p>
+        </PrimeCard>
+        <PrimeCard>
+          <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
+            Total em aberto
+          </p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {formatCurrency(totalVenda)}
+          </p>
+          <p className="text-xs text-white/60">
+            Soma estimada da venda em edição
+          </p>
+        </PrimeCard>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {resumoPagamentoCards.map((option) => (
+          <PrimeCard
+            key={option.value}
+            className={`${
+              paymentSummaryStyles[option.value]
+            } border text-sm font-medium`}
+          >
+            <p className="text-xs uppercase tracking-[0.35em]">
+              {option.label}
+            </p>
+            <p className="mt-2 text-2xl font-black">
+              {loadingResumo ? "--" : formatCurrency(option.valor)}
+            </p>
+            <p className="text-xs opacity-70">Participação no período</p>
+          </PrimeCard>
+        ))}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+        <PrimeCard className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-slate-400">
-                <tr className="border-b border-slate-800/80">
-                  <th className="px-4 py-3 font-semibold">Data</th>
-                  <th className="px-4 py-3 font-semibold">Cliente</th>
-                  <th className="px-4 py-3 font-semibold">Pagamento</th>
-                  <th className="px-4 py-3 font-semibold">Total</th>
-                  <th className="px-4 py-3" />
+            <table className="table-premium w-full text-sm">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Pagamento</th>
+                  <th>Total</th>
+                  <th className="text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {vendas.map((venda) => (
-                  <tr
-                    key={venda.id}
-                    className="border-b border-slate-800/60 hover:bg-slate-900/80"
-                  >
-                    <td className="px-4 py-3 text-slate-300">
+                  <tr key={venda.id}>
+                    <td className="text-white/70">
                       {formatDateTime(venda.data)}
                     </td>
-                    <td className="px-4 py-3 text-white">
+                    <td className="text-white">
                       {venda.cliente_nome || "Cliente não informado"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <span
                         className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
                           paymentBadge[venda.forma_pagamento] ||
@@ -583,12 +768,12 @@ export default function Caixa() {
                         )?.label || "Pagamento"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-100">
+                    <td className="text-[#ffe8a3]">
                       {formatCurrency(venda.total)}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td>
                       <button
-                        className="text-xs rounded-lg border border-slate-700 px-3 py-1 text-slate-200 hover:bg-slate-800"
+                        className="rounded-2xl border border-white/20 bg-white/5 px-3 py-1 text-xs text-white/80 hover:border-white/40"
                         onClick={() => handleSelectVenda(venda)}
                       >
                         Ver detalhes
@@ -600,84 +785,76 @@ export default function Caixa() {
             </table>
           </div>
           {!vendas.length && (
-            <p className="px-4 py-6 text-center text-sm text-slate-400">
+            <p className="px-6 py-6 text-center text-sm text-white/60">
               {loadingList
                 ? "Carregando vendas..."
                 : "Nenhuma venda para o período."}
             </p>
           )}
-        </section>
+        </PrimeCard>
 
-        <aside className="space-y-6">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-wider text-slate-500">
-                  Faturamento
-                </p>
-                <h2 className="text-3xl font-semibold text-white">
-                  {formatCurrency(totalVenda)}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Total da venda em edição
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="space-y-6">
+          <PrimeCard>
+            <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
+              Faturamento
+            </p>
+            <p className="mt-2 text-4xl font-black text-white">
+              {formatCurrency(totalVenda)}
+            </p>
+            <p className="text-xs text-white/60">Total da venda em edição</p>
+          </PrimeCard>
 
           {loadingDetalhe && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-300">
+            <PrimeCard className="text-sm text-white/70">
               Carregando detalhes...
-            </div>
+            </PrimeCard>
           )}
 
           {selectedVenda && !loadingDetalhe && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-slate-500">
-                    Venda selecionada
-                  </p>
-                  <h3 className="text-lg font-semibold text-white">
-                    {selectedVenda.venda.cliente_nome ||
-                      "Cliente não informado"}
-                  </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="btn-gold" onClick={handlePrintCupom}>
-                    PDF/A4
-                  </button>
-                  <button className="btn-gold" onClick={handlePrintTermico}>
-                    Imprimir térmica
-                  </button>
-                  <button
-                    className="btn-gold"
+            <PrimeCard className="space-y-5">
+              <div className="flex flex-col gap-2">
+                <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
+                  Venda selecionada
+                </p>
+                <h3 className="text-2xl font-semibold text-white">
+                  {selectedVenda.venda.cliente_nome || "Cliente não informado"}
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  <PrimeButton variant="ghost" onClick={handlePrintCupom}>
+                    <Printer size={16} /> PDF/A4
+                  </PrimeButton>
+                  <PrimeButton variant="ghost" onClick={handlePrintTermico}>
+                    <Printer size={16} /> Térmica
+                  </PrimeButton>
+                  <PrimeButton
+                    variant="ghost"
                     onClick={handleImprimirCupomHtml}
                   >
-                    Imprimir cupom
-                  </button>
-                  <button
-                    className="btn-gold btn-ghost"
+                    <Printer size={16} /> Cupom
+                  </PrimeButton>
+                  <PrimeButton
+                    variant="ghost"
                     onClick={handleEnviarVendaWhatsapp}
                   >
-                    Enviar comprovante no WhatsApp
-                  </button>
+                    <Share2 size={16} /> WhatsApp
+                  </PrimeButton>
                   <button
-                    className="text-slate-500"
+                    className="rounded-2xl border border-white/20 bg-white/5 px-3 py-1 text-xs text-white/70"
                     onClick={() => setSelectedVenda(null)}
                   >
                     Fechar
                   </button>
                 </div>
               </div>
+
               <div id="cupom-print-area" className="space-y-4">
-                <dl className="space-y-2 text-sm text-slate-200">
+                <dl className="space-y-2 text-sm text-white/80">
                   <div className="flex justify-between">
-                    <dt className="text-slate-400">Data</dt>
+                    <dt className="text-white/60">Data</dt>
                     <dd>{formatDateTime(selectedVenda.venda.data)}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-slate-400">Pagamento</dt>
+                    <dt className="text-white/60">Pagamento</dt>
                     <dd>
                       {paymentOptions.find(
                         (option) =>
@@ -686,30 +863,30 @@ export default function Caixa() {
                     </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-slate-400">Total</dt>
-                    <dd className="font-semibold text-white">
+                    <dt className="text-white/60">Total</dt>
+                    <dd className="font-semibold text-[#ffe8a3]">
                       {formatCurrency(selectedVenda.venda.total)}
                     </dd>
                   </div>
                 </dl>
-                <div className="border-t border-slate-800 pt-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">
+                <div className="border-t border-white/10 pt-4">
+                  <p className="mb-3 text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
                     Itens
                   </p>
-                  <ul className="space-y-2 text-sm text-slate-100">
+                  <ul className="space-y-2 text-sm text-white">
                     {selectedVenda.itens.map((item) => (
                       <li
                         key={item.id}
-                        className="flex items-center justify-between text-slate-300"
+                        className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
                       >
                         <div>
-                          <p className="text-white">{item.descricao}</p>
-                          <p className="text-xs text-slate-500">
+                          <p>{item.descricao}</p>
+                          <p className="text-xs text-white/60">
                             {item.quantidade} un ×{" "}
                             {formatCurrency(item.preco_unitario)}
                           </p>
                         </div>
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-[#ffe8a3]">
                           {formatCurrency(item.subtotal)}
                         </span>
                       </li>
@@ -717,20 +894,20 @@ export default function Caixa() {
                   </ul>
                 </div>
               </div>
-            </div>
+            </PrimeCard>
           )}
 
           {!selectedVenda && !loadingDetalhe && (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-5 text-center text-sm text-slate-400">
+            <PrimeCard className="border-dashed border-white/20 bg-transparent text-center text-sm text-white/60">
               Selecione uma venda para ver os detalhes completos.
-            </div>
+            </PrimeCard>
           )}
 
           {cupomPreview && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-3">
+            <PrimeCard className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-slate-500">
+                  <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
                     Cupom gerado
                   </p>
                   <h3 className="text-lg font-semibold text-white">
@@ -738,22 +915,22 @@ export default function Caixa() {
                   </h3>
                 </div>
                 <button
-                  className="text-xs rounded-lg border border-emerald-500/60 px-3 py-1 text-emerald-200 hover:bg-emerald-500/10"
+                  className="rounded-2xl border border-emerald-400/40 bg-white/5 px-3 py-1 text-xs text-emerald-200"
                   onClick={() => enviarCupomBluetoothPlaceholder(cupomPreview)}
                 >
                   Bluetooth
                 </button>
               </div>
-              <pre className="max-h-56 overflow-auto rounded-xl bg-slate-950/60 p-4 text-xs text-slate-200">
+              <pre className="max-h-56 overflow-auto rounded-xl bg-black/40 p-4 text-xs text-white/80">
                 {cupomPreview}
               </pre>
-            </div>
+            </PrimeCard>
           )}
 
           {pixPreview?.dataUrl && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4">
+            <PrimeCard className="space-y-4">
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-500">
+                <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
                   Pagamento PIX
                 </p>
                 <h3 className="text-lg font-semibold text-white">
@@ -764,30 +941,30 @@ export default function Caixa() {
                 <img
                   src={pixPreview.dataUrl}
                   alt="QR Code PIX"
-                  className="h-48 w-48 rounded-xl border border-slate-800 bg-white p-2"
+                  className="h-48 w-48 rounded-2xl border border-white/10 bg-white p-3"
                 />
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-white/80">
                   Valor: <strong>{formatCurrency(pixPreview.valor)}</strong>
                 </p>
-                <p className="text-[11px] text-slate-500 break-all">
+                <p className="break-all text-[11px] text-white/50">
                   Payload: {pixPreview.payload}
                 </p>
               </div>
-            </div>
+            </PrimeCard>
           )}
-        </aside>
+        </div>
       </div>
 
       {drawerOpen && (
         <div className="fixed inset-0 z-40 flex">
           <div
-            className="absolute inset-0 bg-slate-950/70"
+            className="absolute inset-0 bg-black/70 backdrop-blur"
             onClick={() => setDrawerOpen(false)}
           />
-          <div className="relative ml-auto h-full w-full max-w-2xl overflow-y-auto border-l border-slate-800 bg-slate-950 px-6 py-8 shadow-2xl">
+          <div className="relative ml-auto h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#050308] px-8 py-8 shadow-[0_0_60px_rgba(0,0,0,0.8)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                <p className="text-xs uppercase tracking-[0.4em] text-[#cdb88d]">
                   Nova venda
                 </p>
                 <h2 className="text-2xl font-semibold text-white">
@@ -795,29 +972,29 @@ export default function Caixa() {
                 </h2>
               </div>
               <button
-                className="text-slate-400 hover:text-white"
+                className="rounded-full border border-white/15 p-2 text-white/60 hover:border-white/40"
                 onClick={() => setDrawerOpen(false)}
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
-            <div className="mt-6 flex items-center gap-3 text-xs font-semibold text-slate-400">
+            <div className="mt-6 flex items-center gap-3 text-xs font-semibold">
               <span
                 className={`px-3 py-1 rounded-full border ${
                   formStep >= 1
-                    ? "border-emerald-500 text-emerald-300"
-                    : "border-slate-700"
+                    ? "border-[#ffe8a3] text-[#ffe8a3]"
+                    : "border-white/10 text-white/40"
                 }`}
               >
                 1. Cabeçalho
               </span>
-              <span className="h-px flex-1 bg-slate-700" />
+              <span className="h-px flex-1 bg-white/10" />
               <span
                 className={`px-3 py-1 rounded-full border ${
                   formStep === 2
-                    ? "border-emerald-500 text-emerald-300"
-                    : "border-slate-700"
+                    ? "border-[#ffe8a3] text-[#ffe8a3]"
+                    : "border-white/10 text-white/40"
                 }`}
               >
                 2. Itens
@@ -826,84 +1003,63 @@ export default function Caixa() {
 
             {formStep === 1 && (
               <div className="mt-6 space-y-4">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs uppercase tracking-wide text-slate-400">
-                    Data
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-slate-100"
-                    value={cabecalho.data}
-                    onChange={(event) =>
-                      setCabecalho((prev) => ({
-                        ...prev,
-                        data: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs uppercase tracking-wide text-slate-400">
-                    Cliente
-                  </label>
-                  <input
-                    type="text"
-                    className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-slate-100"
-                    value={cabecalho.cliente_nome}
-                    onChange={(event) =>
-                      setCabecalho((prev) => ({
-                        ...prev,
-                        cliente_nome: event.target.value,
-                      }))
-                    }
-                    placeholder="Opcional"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs uppercase tracking-wide text-slate-400">
-                    Forma de pagamento
-                  </label>
-                  <select
-                    className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-slate-100"
-                    value={cabecalho.forma_pagamento}
-                    onChange={(event) =>
-                      setCabecalho((prev) => ({
-                        ...prev,
-                        forma_pagamento: event.target.value,
-                      }))
-                    }
-                  >
-                    {paymentOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs uppercase tracking-wide text-slate-400">
-                    Observações
-                  </label>
-                  <textarea
-                    rows={3}
-                    className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-slate-100"
-                    value={cabecalho.observacoes}
-                    onChange={(event) =>
-                      setCabecalho((prev) => ({
-                        ...prev,
-                        observacoes: event.target.value,
-                      }))
-                    }
-                    placeholder="Anote informações extras sobre a venda"
-                  />
-                </div>
+                <PrimeInput
+                  label="Data"
+                  type="datetime-local"
+                  value={cabecalho.data}
+                  onChange={(event) =>
+                    setCabecalho((prev) => ({
+                      ...prev,
+                      data: event.target.value,
+                    }))
+                  }
+                />
+                <PrimeInput
+                  label="Cliente"
+                  type="text"
+                  placeholder="Opcional"
+                  value={cabecalho.cliente_nome}
+                  onChange={(event) =>
+                    setCabecalho((prev) => ({
+                      ...prev,
+                      cliente_nome: event.target.value,
+                    }))
+                  }
+                />
+                <PrimeInput
+                  as="select"
+                  label="Forma de pagamento"
+                  value={cabecalho.forma_pagamento}
+                  onChange={(event) =>
+                    setCabecalho((prev) => ({
+                      ...prev,
+                      forma_pagamento: event.target.value,
+                    }))
+                  }
+                >
+                  {paymentOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </PrimeInput>
+                <PrimeInput
+                  as="textarea"
+                  rows={3}
+                  label="Observações"
+                  placeholder="Anote informações extras sobre a venda"
+                  value={cabecalho.observacoes}
+                  onChange={(event) =>
+                    setCabecalho((prev) => ({
+                      ...prev,
+                      observacoes: event.target.value,
+                    }))
+                  }
+                />
                 <div className="flex justify-end">
-                  <button
-                    className="rounded-xl border border-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-300"
-                    onClick={() => setFormStep(2)}
-                  >
+                  <PrimeButton variant="ghost" onClick={() => setFormStep(2)}>
                     Continuar
-                  </button>
+                  </PrimeButton>
                 </div>
               </div>
             )}
@@ -911,13 +1067,10 @@ export default function Caixa() {
             {formStep === 2 && (
               <div className="mt-6 space-y-6">
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="flex flex-col gap-1 md:col-span-2">
-                    <label className="text-xs uppercase tracking-wide text-slate-400">
-                      Descrição do item
-                    </label>
-                    <input
-                      type="text"
-                      className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-slate-100"
+                  <div className="md:col-span-2">
+                    <PrimeInput
+                      label="Descrição do item"
+                      placeholder="Ex: Película iPhone 13"
                       value={itemDraft.descricao}
                       onChange={(event) =>
                         setItemDraft((prev) => ({
@@ -925,87 +1078,66 @@ export default function Caixa() {
                           descricao: event.target.value,
                         }))
                       }
-                      placeholder="Ex: Película iPhone 13"
                     />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs uppercase tracking-wide text-slate-400">
-                      Quantidade
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-slate-100"
-                      value={itemDraft.quantidade}
-                      onChange={(event) =>
-                        setItemDraft((prev) => ({
-                          ...prev,
-                          quantidade: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs uppercase tracking-wide text-slate-400">
-                      Preço unitário
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-slate-100"
-                      value={itemDraft.preco_unitario}
-                      onChange={(event) =>
-                        setItemDraft((prev) => ({
-                          ...prev,
-                          preco_unitario: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
+                  <PrimeInput
+                    label="Quantidade"
+                    type="number"
+                    min="1"
+                    value={itemDraft.quantidade}
+                    onChange={(event) =>
+                      setItemDraft((prev) => ({
+                        ...prev,
+                        quantidade: event.target.value,
+                      }))
+                    }
+                  />
+                  <PrimeInput
+                    label="Preço unitário"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={itemDraft.preco_unitario}
+                    onChange={(event) =>
+                      setItemDraft((prev) => ({
+                        ...prev,
+                        preco_unitario: event.target.value,
+                      }))
+                    }
+                  />
                 </div>
                 <div>
-                  <button
-                    className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800"
-                    onClick={handleAddItem}
-                  >
+                  <PrimeButton variant="ghost" onClick={handleAddItem}>
                     Adicionar item
-                  </button>
+                  </PrimeButton>
                 </div>
 
-                <div className="rounded-2xl border border-slate-800">
+                <PrimeCard className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="text-left text-slate-400">
-                        <tr className="border-b border-slate-800/80">
-                          <th className="px-4 py-3 font-semibold">Descrição</th>
-                          <th className="px-4 py-3 font-semibold">Qtd</th>
-                          <th className="px-4 py-3 font-semibold">Preço</th>
-                          <th className="px-4 py-3 font-semibold">Subtotal</th>
-                          <th className="px-4 py-3" />
+                    <table className="table-premium w-full text-sm">
+                      <thead>
+                        <tr>
+                          <th>Descrição</th>
+                          <th>Qtd</th>
+                          <th>Preço</th>
+                          <th>Subtotal</th>
+                          <th className="text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody>
                         {itens.map((item) => (
-                          <tr
-                            key={item.id}
-                            className="border-b border-slate-800/60"
-                          >
-                            <td className="px-4 py-3 text-white">
-                              {item.descricao}
-                            </td>
-                            <td className="px-4 py-3 text-slate-300">
-                              {item.quantidade}
-                            </td>
-                            <td className="px-4 py-3 text-slate-300">
+                          <tr key={item.id}>
+                            <td className="text-white">{item.descricao}</td>
+                            <td>{item.quantidade}</td>
+                            <td className="text-white/70">
                               {formatCurrency(item.preco_unitario)}
                             </td>
-                            <td className="px-4 py-3 text-slate-100">
+                            <td className="text-[#ffe8a3]">
                               {formatCurrency(item.subtotal)}
                             </td>
-                            <td className="px-4 py-3 text-right">
+                            <td>
                               <button
-                                className="text-xs rounded-lg border border-rose-700 px-3 py-1 text-rose-200 hover:bg-rose-900/30"
+                                className="rounded-2xl border border-red-500/40 bg-white/5 px-3 py-1 text-xs text-red-200"
                                 onClick={() => handleRemoveItem(item.id)}
                               >
                                 Remover
@@ -1017,26 +1149,26 @@ export default function Caixa() {
                     </table>
                   </div>
                   {!itens.length && (
-                    <p className="px-4 py-6 text-center text-sm text-slate-500">
+                    <p className="px-6 py-6 text-center text-sm text-white/60">
                       Nenhum item adicionado.
                     </p>
                   )}
-                </div>
+                </PrimeCard>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-                  <div className="flex justify-between text-sm text-slate-400">
+                <PrimeCard>
+                  <div className="flex justify-between text-sm text-white/70">
                     <span>Itens</span>
                     <span>{itens.length}</span>
                   </div>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <p className="text-xs uppercase tracking-widest text-slate-500">
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
                       Total estimado
                     </p>
-                    <p className="text-3xl font-semibold text-white">
+                    <p className="text-3xl font-black text-white">
                       {formatCurrency(totalVenda)}
                     </p>
                   </div>
-                </div>
+                </PrimeCard>
 
                 {formMessage && (
                   <div
@@ -1051,19 +1183,12 @@ export default function Caixa() {
                 )}
 
                 <div className="flex items-center justify-between">
-                  <button
-                    className="rounded-xl border border-slate-700 px-5 py-2 text-sm font-semibold text-slate-200"
-                    onClick={() => setFormStep(1)}
-                  >
+                  <PrimeButton variant="ghost" onClick={() => setFormStep(1)}>
                     Voltar
-                  </button>
-                  <button
-                    className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-semibold text-slate-950"
-                    onClick={handleSaveVenda}
-                    disabled={saving}
-                  >
+                  </PrimeButton>
+                  <PrimeButton onClick={handleSaveVenda} disabled={saving}>
                     {saving ? "Salvando..." : "Salvar venda"}
-                  </button>
+                  </PrimeButton>
                 </div>
               </div>
             )}

@@ -16,7 +16,7 @@ Este guia resume o que precisa ser configurado antes de liberar uma nova loja/pr
 ## 2. Provisionamento Supabase
 
 1. Crie o proprietário na tabela `proprietarios` com email que será usado no login.
-2. Defina a `loja_id` (ou utilize o `id` do proprietário) em todas as tabelas dependentes.
+2. Garanta que `proprietario_id` esteja preenchido em todas as tabelas dependentes (não existe mais `loja_id`).
 3. Verifique se as RLS policies permitem o acesso apenas quando `proprietario_id = auth.uid()`.
 4. Gere um usuário auth convencional ou cadastre via Dashboard do Supabase e vincule ao mesmo email.
 
