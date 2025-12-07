@@ -50,12 +50,16 @@ export function AuthProvider({ children }) {
       try {
         const { data: owner, error: ownerError } = await supabase
           .from("proprietarios")
-          .select("id,nome,email")
-          .eq("user_id", user.id)
-          .single();
+          .select("id,nome,email,auth_user_id")
+          .or(`auth_user_id.eq.${user.id},email.eq.${user.email}`)
+          .maybeSingle();
 
         if (ownerError) {
           throw ownerError;
+        }
+
+        if (!owner) {
+          throw new Error("Nenhum proprietário vinculado a este usuário.");
         }
 
         persistirSessao({
