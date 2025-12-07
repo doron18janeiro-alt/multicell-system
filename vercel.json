@@ -1,14 +1,7 @@
 {
   "version": 2,
   "framework": "vite",
-  "buildCommand": "cd resgate/multicell-system && npm install && npm run build",
-  "installCommand": "cd resgate/multicell-system && npm install",
-  "outputDirectory": "resgate/multicell-system/dist",
-  "builds": [
-    {
-      "src": "resgate/multicell-system/vite.config.js",
-      "use": "@vercel/static-build"
-    }
-  ],
+  "rootDirectory": "resgate/multicell-system",
+  "outputDirectory": "dist",
   "routes": [{ "src": "/(.*)", "dest": "/index.html" }]
 }
