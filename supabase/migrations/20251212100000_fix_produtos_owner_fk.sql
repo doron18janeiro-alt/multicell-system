@@ -1,6 +1,10 @@
 -- Corrige FK de produtos para referenciar proprietarios.id e alinha RLS
 set check_function_bodies = off;
 
+-- Remove a constraint antes de normalizar dados para evitar erros de FK
+alter table public.produtos
+  drop constraint if exists produtos_proprietario_fk;
+
 -- Normaliza proprietario_id caso tenha sido gravado com user_id
 do $$
 declare
@@ -22,15 +26,16 @@ begin
   end if;
 end $$;
 
--- Preenche valores nulos com o owner padrão do seed para evitar violação temporária
-update public.produtos
+-- Corrige quaisquer proprietario_id órfãos ou nulos para o owner padrão do seed
+update public.produtos pr
 set proprietario_id = '8def6638-8eac-465a-84e8-26764eb36eeb'::uuid
-where proprietario_id is null;
+where pr.proprietario_id is null
+   or not exists (
+        select 1 from public.proprietarios p
+        where p.id = pr.proprietario_id
+   );
 
 -- Refaz a constraint sempre apontando para proprietarios(id)
-alter table public.produtos
-drop constraint if exists produtos_proprietario_fk;
-
 alter table public.produtos
   add constraint produtos_proprietario_fk
   foreign key (proprietario_id)
