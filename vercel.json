@@ -4,7 +4,5 @@
   "installCommand": "cd multicell-system && npm install",
   "buildCommand": "cd multicell-system && npm run build",
   "outputDirectory": "multicell-system/dist",
-  "routes": [
-    { "src": "/(.*)", "dest": "/multicell-system/dist/$1" }
-  ]
+  "routes": [{ "src": "/(.*)", "dest": "/multicell-system/dist/$1" }]
 }
