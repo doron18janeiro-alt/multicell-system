@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": "vite",
-  "rootDirectory": "resgate/multicell-system",
   "outputDirectory": "dist",
   "routes": [{ "src": "/(.*)", "dest": "/index.html" }]
 }
+  "outputDirectory": "resgate/multicell-system/dist",
