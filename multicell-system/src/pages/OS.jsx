@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Filter, Plus, Printer, Share2, X } from "lucide-react";
+import { ClipboardList, Filter, Plus, Printer, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import OsForm from "../components/OsForm.jsx";
 import TermoGarantia from "../components/TermoGarantia.jsx";
 import FileUploader from "../components/files/FileUploader.jsx";
 import FileGallery from "../components/files/FileGallery.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
-import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
+import { deleteOs, listOs } from "../services/osService";
 import PrimeCard from "../components/ui/PrimeCard.jsx";
 import PrimeButton from "../components/ui/PrimeButton.jsx";
 import PrimeInput from "../components/ui/PrimeInput.jsx";
@@ -63,10 +62,7 @@ export default function OsPage() {
   const [status, setStatus] = useState("todos");
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [openForm, setOpenForm] = useState(false);
-  const [editingOs, setEditingOs] = useState(null);
   const [loadingList, setLoadingList] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [termOs, setTermOs] = useState(null);
   const [galleryKey, setGalleryKey] = useState(0);
@@ -214,17 +210,6 @@ export default function OsPage() {
     setLoadingList(false);
   }
 
-  function handleNew() {
-    setEditingOs(null);
-    setSelected(null);
-    setOpenForm(true);
-  }
-
-  function handleEdit(os) {
-    setEditingOs(os);
-    setOpenForm(true);
-  }
-
   async function handleDelete(os) {
     if (!window.confirm(`Deseja realmente excluir a OS de ${os.cliente_nome}?`))
       return;
@@ -241,25 +226,6 @@ export default function OsPage() {
 
   function handleOpenTermo(os) {
     setTermOs(os);
-  }
-
-  async function handleSave(formValues) {
-    setSaving(true);
-    const actionPromise = editingOs
-      ? updateOs(editingOs.id, proprietarioId, formValues)
-      : createOs(proprietarioId, {
-          ...formValues,
-          data_entrada: new Date().toISOString(),
-        });
-    const { error } = await actionPromise;
-    setSaving(false);
-    if (error) {
-      alert(error.message);
-      return;
-    }
-    setOpenForm(false);
-    setEditingOs(null);
-    loadOs();
   }
 
   const emptyMessage = useMemo(() => {
@@ -294,7 +260,12 @@ export default function OsPage() {
           icon={ClipboardList}
           className="flex-1"
         />
-        <PrimeButton onClick={handleNew} className="self-start lg:self-auto">
+        <PrimeButton
+          onClick={() =>
+            alert("Cadastro/edição de OS não está disponível neste build.")
+          }
+          className="self-start lg:self-auto"
+        >
           <Plus size={18} /> Nova OS
         </PrimeButton>
       </div>
@@ -389,7 +360,11 @@ export default function OsPage() {
                           </button>
                           <button
                             className="rounded-2xl border border-[#8f5eff]/40 bg-white/5 px-3 py-1 text-xs text-[#c6b5ff] hover:border-[#8f5eff]/80"
-                            onClick={() => handleEdit(os)}
+                            onClick={() =>
+                              alert(
+                                "Edição de OS não está disponível neste build."
+                              )
+                            }
                           >
                             Editar
                           </button>
@@ -423,41 +398,6 @@ export default function OsPage() {
         </PrimeCard>
 
         <div className="space-y-6">
-          {openForm && (
-            <PrimeCard>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.35em] text-[#cdb88d]">
-                    {editingOs ? "Editar OS" : "Nova OS"}
-                  </p>
-                  <h2 className="text-2xl font-semibold text-white">
-                    {editingOs ? editingOs.cliente_nome : "Cadastro"}
-                  </h2>
-                </div>
-                <button
-                  onClick={() => {
-                    setOpenForm(false);
-                    setEditingOs(null);
-                  }}
-                  className="rounded-full border border-white/10 p-2 text-white/60 hover:border-white/40"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="mt-4">
-                <OsForm
-                  initialData={editingOs || null}
-                  onCancel={() => {
-                    setOpenForm(false);
-                    setEditingOs(null);
-                  }}
-                  onSave={handleSave}
-                  loading={saving}
-                />
-              </div>
-            </PrimeCard>
-          )}
-
           {selected && (
             <PrimeCard className="space-y-5">
               <div className="flex flex-col gap-3">
@@ -556,7 +496,7 @@ export default function OsPage() {
             </PrimeCard>
           )}
 
-          {!openForm && !selected && (
+          {!selected && (
             <PrimeCard className="border-dashed border-white/20 bg-transparent text-center text-sm text-white/60">
               Selecione uma OS para ver detalhes ou clique em “Nova OS” para
               cadastrar.
