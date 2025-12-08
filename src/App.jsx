@@ -4,21 +4,23 @@ import { AuthProvider } from "./contexts/AuthContext";
 import PrivateRoute from "./routes/PrivateRoute";
 import AppLayout from "./layout/AppLayout";
 
-const Login = lazy(() => import("./pages/Login"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Produtos = lazy(() => import("./pages/Produtos"));
-const Clientes = lazy(() => import("./pages/Clientes"));
-const Os = lazy(() => import("./pages/Os"));
-const Estoque = lazy(() => import("./pages/Estoque"));
-const Vendas = lazy(() => import("./pages/Vendas"));
-const Relatorios = lazy(() => import("./pages/Relatorios"));
-const Config = lazy(() => import("./pages/Config"));
-const ConfigUsuarios = lazy(() => import("./pages/ConfigUsuarios"));
-const TermoGarantia = lazy(() => import("./pages/TermoGarantia"));
-const Historico = lazy(() => import("./pages/Historico"));
-const DespesasList = lazy(() => import("./pages/Despesas/Despesas"));
-const NovaDespesa = lazy(() => import("./pages/Despesas/NovaDespesa"));
-const DetalhesDespesa = lazy(() => import("./pages/Despesas/DetalhesDespesa"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const Produtos = lazy(() => import("./pages/Produtos.jsx"));
+const Clientes = lazy(() => import("./pages/Clientes.jsx"));
+const Os = lazy(() => import("./pages/Os.jsx"));
+const Estoque = lazy(() => import("./pages/Estoque.jsx"));
+const Vendas = lazy(() => import("./pages/Vendas.jsx"));
+const Relatorios = lazy(() => import("./pages/Relatorios.jsx"));
+const Config = lazy(() => import("./pages/Config.jsx"));
+const ConfigUsuarios = lazy(() => import("./pages/ConfigUsuarios.jsx"));
+const TermoGarantia = lazy(() => import("./pages/TermoGarantia.jsx"));
+const Historico = lazy(() => import("./pages/Historico.jsx"));
+const DespesasList = lazy(() => import("./pages/Despesas/Despesas.jsx"));
+const NovaDespesa = lazy(() => import("./pages/Despesas/NovaDespesa.jsx"));
+const DetalhesDespesa = lazy(() =>
+  import("./pages/Despesas/DetalhesDespesa.jsx")
+);
 
 function CinematicFallback() {
   return (

@@ -1,15 +1,16 @@
 // Arquivo legado removido após reorganização de rotas
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
-const AppLayout = lazy(() => import("./layouts/AppLayout"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Os = lazy(() => import("./pages/Os"));
-const DetalhesOS = lazy(() => import("./pages/OS/DetalhesOS"));
-const Estoque = lazy(() => import("./pages/Estoque"));
-const DetalhesProduto = lazy(() => import("./pages/Produtos/DetalhesProduto"));
-const Relatorios = lazy(() => import("./pages/Relatorios"));
-const Config = lazy(() => import("./pages/Config"));
-const Login = lazy(() => import("./pages/Login"));
+const AppLayout = lazy(() => import("./layouts/AppLayout.jsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const Os = lazy(() => import("./pages/Os.jsx"));
+const DetalhesOS = lazy(() => import("./pages/OS/DetalhesOS.jsx"));
+const Estoque = lazy(() => import("./pages/Estoque.jsx"));
+const DetalhesProduto = lazy(() => import("./pages/Produtos/DetalhesProduto.jsx"));
+const Relatorios = lazy(() => import("./pages/Relatorios.jsx"));
+const Config = lazy(() => import("./pages/Config.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
 
 function CinematicFallback() {
   return (
