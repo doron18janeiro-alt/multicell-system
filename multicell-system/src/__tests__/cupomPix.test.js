@@ -1,4 +1,4 @@
-import { gerarHtmlCupomVenda } from "../pages/Caixa";
+import { gerarHtmlCupomVenda } from "../utils/cupom";
 import { gerarPix } from "../utils/pix";
 
 const toDataURLMock = vi.hoisted(() =>

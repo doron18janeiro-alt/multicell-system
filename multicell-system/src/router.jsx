@@ -6,7 +6,6 @@ const AppLayout = lazy(() => import("./layouts/AppLayout.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
 const Os = lazy(() => import("./pages/Os.jsx"));
 const DetalhesOS = lazy(() => import("./pages/OS/DetalhesOS.jsx"));
-const Caixa = lazy(() => import("./pages/Caixa.jsx"));
 const Estoque = lazy(() => import("./pages/Estoque.jsx"));
 const DetalhesProduto = lazy(() => import("./pages/Produtos/DetalhesProduto.jsx"));
 const Relatorios = lazy(() => import("./pages/Relatorios.jsx"));
@@ -80,14 +79,6 @@ export function createAppRouter({ user, onLogout }) {
           path: "os",
           element: (
             <ProtectedRoute user={user}>{withSuspense(<Os />)}</ProtectedRoute>
-          ),
-        },
-        {
-          path: "caixa",
-          element: (
-            <ProtectedRoute user={user}>
-              {withSuspense(<Caixa />)}
-            </ProtectedRoute>
           ),
         },
         {

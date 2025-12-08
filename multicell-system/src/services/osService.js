@@ -17,9 +17,7 @@ export async function listOs(proprietarioId, { search, status } = {}) {
   }
 
   let query = withOwnerFilter(
-    supabase.from(TABLE).select("*").order("data_entrada", {
-      ascending: false,
-    }),
+    supabase.from(TABLE).select("*").order("criado_em", { ascending: false }),
     proprietarioId
   );
 
@@ -51,7 +49,8 @@ export async function createOs(proprietarioId, payload) {
   }
   const body = {
     ...payload,
-    data_entrada: payload.data_entrada || new Date().toISOString(),
+    criado_em:
+      payload.criado_em || payload.data_entrada || new Date().toISOString(),
     status: payload.status || "aberta",
     proprietario_id: proprietarioId,
   };
@@ -97,16 +96,16 @@ export async function getResumoOs(
   let query = withOwnerFilter(
     supabase
       .from(TABLE)
-      .select("status, data_entrada")
-      .order("data_entrada", { ascending: false }),
+      .select("status, criado_em")
+      .order("criado_em", { ascending: false }),
     proprietarioId
   );
 
   if (dataInicial) {
-    query = query.gte("data_entrada", dataInicial);
+    query = query.gte("criado_em", dataInicial);
   }
   if (dataFinal) {
-    query = query.lte("data_entrada", dataFinal);
+    query = query.lte("criado_em", dataFinal);
   }
 
   const { data, error } = await query;

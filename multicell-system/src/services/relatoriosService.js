@@ -81,12 +81,12 @@ export async function obterVendasRecentes(proprietarioId) {
   const { data, error, count } = await supabase
     .from("vendas")
     .select(
-      "id,created_at,forma_pagamento,total_liquido,cliente:clientes(nome)",
+      "id,criado_em,forma_pagamento,total_liquido,total_bruto,total,cliente:clientes(nome)",
       { count: "exact" }
     )
-    .eq("usuario_id", proprietarioId)
-    .gte("created_at", inicioPeriodo)
-    .order("created_at", { ascending: false })
+    .eq("proprietario_id", proprietarioId)
+    .gte("criado_em", inicioPeriodo)
+    .order("criado_em", { ascending: false })
     .limit(10);
 
   if (error) {
@@ -114,21 +114,23 @@ export async function obterResumoVendas(
 
   let query = supabase
     .from("vendas")
-    .select("total_liquido,total_bruto,desconto,forma_pagamento,created_at")
-    .eq("usuario_id", ownerId)
-    .order("created_at", { ascending: false });
+    .select(
+      "total_liquido,total_bruto,total,desconto,forma_pagamento,criado_em"
+    )
+    .eq("proprietario_id", ownerId)
+    .order("criado_em", { ascending: false });
 
   if (dataInicial) {
-    query = query.gte("created_at", dataInicial);
+    query = query.gte("criado_em", dataInicial);
   }
 
   if (dataFinal) {
     const end = new Date(dataFinal);
     if (!Number.isNaN(end.getTime())) {
       end.setHours(23, 59, 59, 999);
-      query = query.lte("created_at", end.toISOString());
+      query = query.lte("criado_em", end.toISOString());
     } else {
-      query = query.lte("created_at", dataFinal);
+      query = query.lte("criado_em", dataFinal);
     }
   }
 
@@ -145,7 +147,8 @@ export async function obterResumoVendas(
   resumo.quantidade = rows.length;
 
   rows.forEach((row) => {
-    const valor = Number(row.total_liquido ?? row.total_bruto ?? 0) || 0;
+    const valor =
+      Number(row.total_liquido ?? row.total_bruto ?? row.total ?? 0) || 0;
     resumo.total += valor;
     const pagamento = normalizeFormaPagamento(row.forma_pagamento);
     resumo.porPagamento[pagamento] += valor;
@@ -159,9 +162,11 @@ export async function obterResumoMensal(proprietarioId) {
 
   const { data, error } = await supabase
     .from("vendas")
-    .select("id,total_bruto,total_liquido,desconto,created_at,forma_pagamento")
-    .eq("usuario_id", proprietarioId)
-    .gte("created_at", inicioMes);
+    .select(
+      "id,total_bruto,total_liquido,total,desconto,criado_em,forma_pagamento"
+    )
+    .eq("proprietario_id", proprietarioId)
+    .gte("criado_em", inicioMes);
 
   if (error) {
     console.error("[relatorios] resumo_mensal", error);

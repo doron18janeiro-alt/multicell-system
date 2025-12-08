@@ -2,14 +2,13 @@ import { NavLink, useNavigate } from "react-router-dom";
 import LogoAnimada from "../components/LogoAnimada";
 
 const navItems = [
-  { label: "Dashboard", path: "/", icon: "[D]" },
-  { label: "Caixa", path: "/caixa", icon: "[CX]" },
-  { label: "Vendas", path: "/vendas", icon: "[VN]" },
+  { label: "Dashboard", path: "/dashboard", icon: "[D]" },
   { label: "Produtos", path: "/produtos", icon: "[PR]" },
-  { label: "Estoque", path: "/estoque", icon: "[ES]" },
-  { label: "Usuarios", path: "/usuarios", icon: "[US]" },
-  { label: "Configuracoes", path: "/config", icon: "[CF]" },
+  { label: "Clientes", path: "/clientes", icon: "[CL]" },
+  { label: "Vendas", path: "/vendas", icon: "[VN]" },
+  { label: "OS", path: "/os", icon: "[OS]" },
   { label: "Relatorios", path: "/relatorios", icon: "[RL]" },
+  { label: "Configuracoes", path: "/config", icon: "[CF]" },
 ];
 
 export default function Sidebar() {

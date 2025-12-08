@@ -1,9 +1,10 @@
 .header-container {
   width: 100%;
   padding: 16px 22px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(17, 17, 17, 0.9);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -53,7 +54,7 @@
 
 .header-user {
   text-align: right;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(240, 238, 230, 0.82);
   font-size: 0.8rem;
   line-height: 1.2;
 }
@@ -62,13 +63,13 @@
   text-transform: uppercase;
   letter-spacing: 0.2em;
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(240, 238, 230, 0.6);
 }
 
 .header-user-email {
   display: block;
   font-size: 0.95rem;
-  color: #fff;
+  color: #f7f4dc;
 }
 
 .header-title-block {
@@ -90,7 +91,8 @@
 
 .header-subtitle {
   font-size: 0.82rem;
-  opacity: 0.82;
+  opacity: 0.86;
+  color: rgba(240, 238, 230, 0.8);
   margin-top: 2px;
   animation: fadeIn 1.3s ease;
 }

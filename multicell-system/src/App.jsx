@@ -8,8 +8,7 @@ const Login = lazy(() => import("./pages/Login.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
 const Produtos = lazy(() => import("./pages/Produtos.jsx"));
 const Clientes = lazy(() => import("./pages/Clientes.jsx"));
-const Os = lazy(() => import("./pages/Os.jsx"));
-const Caixa = lazy(() => import("./pages/Caixa.jsx"));
+const Os = lazy(() => import("./pages/OS.jsx"));
 const Estoque = lazy(() => import("./pages/Estoque.jsx"));
 const Vendas = lazy(() => import("./pages/Vendas.jsx"));
 const Relatorios = lazy(() => import("./pages/Relatorios.jsx"));
@@ -65,7 +64,6 @@ export default function App() {
               <Route path="/produtos" element={<Produtos />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/os" element={<Os />} />
-              <Route path="/caixa" element={<Caixa />} />
               <Route path="/estoque" element={<Estoque />} />
               <Route path="/vendas" element={<Vendas />} />
               <Route path="/relatorios" element={<Relatorios />} />

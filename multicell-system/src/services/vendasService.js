@@ -15,7 +15,8 @@ export async function registrarVenda(proprietarioId, venda, itens = []) {
   const payload = {
     ...venda,
     proprietario_id: proprietarioId,
-    data_venda: venda?.data_venda || new Date().toISOString(),
+    criado_em:
+      venda?.criado_em || venda?.data_venda || new Date().toISOString(),
     status: venda?.status || "concluido",
     total_bruto: Number(venda?.total_bruto || 0),
     desconto: Number(venda?.desconto || 0),
@@ -79,17 +80,17 @@ export async function listarVendas(
     .from("vendas")
     .select("*")
     .eq("proprietario_id", proprietarioId)
-    .order("data_venda", { ascending: false })
+    .order("criado_em", { ascending: false })
     .limit(limite);
 
   if (clienteId) {
     query = query.eq("cliente_id", clienteId);
   }
   if (dataInicial) {
-    query = query.gte("data_venda", dataInicial);
+    query = query.gte("criado_em", dataInicial);
   }
   if (dataFinal) {
-    query = query.lte("data_venda", dataFinal);
+    query = query.lte("criado_em", dataFinal);
   }
 
   const { data, error } = await query;

@@ -6,7 +6,8 @@ import {
   Users,
   ShoppingCart,
   Wrench,
-  Wallet,
+  FileText,
+  Settings,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext.jsx";
@@ -18,7 +19,8 @@ const links = [
   { label: "Clientes", icon: Users, to: "/clientes" },
   { label: "Vendas", icon: ShoppingCart, to: "/vendas" },
   { label: "Ordens de Serviço", icon: Wrench, to: "/os" },
-  { label: "Caixa", icon: Wallet, to: "/caixa" },
+  { label: "Relatórios", icon: FileText, to: "/relatorios" },
+  { label: "Configurações", icon: Settings, to: "/config" },
 ];
 
 export default function Sidebar() {

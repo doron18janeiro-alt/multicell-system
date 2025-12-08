@@ -1,7 +1,7 @@
 import { supabase } from "./services/supabaseClient";
 
 const safeDate = () => new Date().toISOString();
-const withOwner = (ownerId) => (ownerId ? { usuario_id: ownerId } : {});
+const withOwner = (ownerId) => (ownerId ? { proprietario_id: ownerId } : {});
 
 export { supabase };
 
@@ -62,11 +62,11 @@ export async function loadVendas(ownerId, { inicio, fim, limite = 50 } = {}) {
     .from("vendas")
     .select("*")
     .match(withOwner(ownerId))
-    .order("created_at", { ascending: false })
+    .order("criado_em", { ascending: false })
     .limit(limite);
 
-  if (inicio) query = query.gte("created_at", inicio);
-  if (fim) query = query.lte("created_at", fim);
+  if (inicio) query = query.gte("criado_em", inicio);
+  if (fim) query = query.lte("criado_em", fim);
 
   const { data, error } = await query;
   handleError("carregar vendas", error);
@@ -76,7 +76,7 @@ export async function loadVendas(ownerId, { inicio, fim, limite = 50 } = {}) {
 export async function createVenda(venda, itensParaEstoque = [], ownerId) {
   const body = {
     ...venda,
-    created_at: venda?.created_at || safeDate(),
+    criado_em: venda?.criado_em || venda?.created_at || safeDate(),
     ...withOwner(ownerId),
   };
   const { data, error } = await supabase
@@ -101,7 +101,7 @@ export async function loadOrdens(ownerId, { search } = {}) {
     .from("os")
     .select("*")
     .match(withOwner(ownerId))
-    .order("data_entrada", { ascending: false });
+    .order("criado_em", { ascending: false });
 
   if (search) {
     const safe = search.trim();
@@ -120,7 +120,7 @@ export async function loadOrdens(ownerId, { search } = {}) {
 export async function createOrdem(payload, ownerId) {
   const body = {
     ...payload,
-    data_entrada: payload?.data_entrada || safeDate(),
+    criado_em: payload?.criado_em || payload?.data_entrada || safeDate(),
     status: payload?.status || "aberta",
     ...withOwner(ownerId),
   };
@@ -177,9 +177,9 @@ export async function loadHistoricoVendas(ownerId, periodo = {}) {
     .from("vendas")
     .select("*")
     .match(withOwner(ownerId))
-    .order("created_at", { ascending: false });
-  if (inicio) query = query.gte("created_at", inicio);
-  if (fim) query = query.lte("created_at", fim);
+    .order("criado_em", { ascending: false });
+  if (inicio) query = query.gte("criado_em", inicio);
+  if (fim) query = query.lte("criado_em", fim);
   const { data, error } = await query;
   handleError("historico de vendas", error);
   return data || [];
