@@ -4,7 +4,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 
 const AppLayout = lazy(() => import("./layouts/AppLayout.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
-const Os = lazy(() => import("./pages/Os.jsx"));
+const Os = lazy(() => import("./pages/OS.jsx"));
 const DetalhesOS = lazy(() => import("./pages/OS/DetalhesOS.jsx"));
 const Estoque = lazy(() => import("./pages/Estoque.jsx"));
 const DetalhesProduto = lazy(() => import("./pages/Produtos/DetalhesProduto.jsx"));
