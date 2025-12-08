@@ -1,7 +1,0 @@
-{
-  "version": 2,
-  "framework": "vite",
-  "installCommand": "cd multicell-system && npm install",
-  "buildCommand": "cd multicell-system && npm run build",
-  "outputDirectory": "multicell-system/dist"
-}
