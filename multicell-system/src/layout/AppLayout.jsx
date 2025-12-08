@@ -1,6 +1,6 @@
 import React, { memo } from "react";
-import Sidebar from "../components/Sidebar";
-import Header from "../components/Header";
+import Sidebar from "../components/Sidebar.jsx";
+import Header from "../components/Header.jsx";
 import { Outlet } from "react-router-dom";
 
 const AppLayout = memo(() => {

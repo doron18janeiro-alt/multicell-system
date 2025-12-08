@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Filter, Plus, Printer, Share2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import OsForm from "../components/OsForm";
-import TermoGarantia from "../components/TermoGarantia";
-import FileUploader from "../components/files/FileUploader";
-import FileGallery from "../components/files/FileGallery";
-import { useAuth } from "../contexts/AuthContext";
+import OsForm from "../components/OsForm.jsx";
+import TermoGarantia from "../components/TermoGarantia.jsx";
+import FileUploader from "../components/files/FileUploader.jsx";
+import FileGallery from "../components/files/FileGallery.jsx";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
 import { createOs, deleteOs, listOs, updateOs } from "../services/osService";
-import PrimeCard from "../components/ui/PrimeCard";
-import PrimeButton from "../components/ui/PrimeButton";
-import PrimeInput from "../components/ui/PrimeInput";
-import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
+import PrimeCard from "../components/ui/PrimeCard.jsx";
+import PrimeButton from "../components/ui/PrimeButton.jsx";
+import PrimeInput from "../components/ui/PrimeInput.jsx";
+import PrimeSectionTitle from "../components/ui/PrimeSectionTitle.jsx";
 
 const statusDictionary = {
   aberta: {

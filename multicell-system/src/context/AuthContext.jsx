@@ -4,7 +4,7 @@ import {
   useContext,
   useEffect,
   // Arquivo legado: re-exporta o contexto real localizado em src/contexts/AuthContext.jsx
-  export { AuthProvider, useAuth } from "../contexts/AuthContext";
+  export { AuthProvider, useAuth } from "../contexts/AuthContext.jsx";
 
   const limparSessao = useCallback(() => {
     setUsuario(null);

@@ -1,8 +1,3 @@
 {
-  "version": 2,
-  "framework": "vite",
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "routes": [{ "src": "/(.*)", "dest": "/dist/$1" }]
+  "note": "Config de deploy deslocada para ../vercel.json na raiz do repositório"
 }

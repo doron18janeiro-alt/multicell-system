@@ -1,8 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Suspense, lazy } from "react";
-import { AuthProvider } from "./contexts/AuthContext";
-import PrivateRoute from "./routes/PrivateRoute";
-import AppLayout from "./layout/AppLayout";
+import { AuthProvider } from "./contexts/AuthContext.jsx";
+import PrivateRoute from "./routes/PrivateRoute.jsx";
+import AppLayout from "./layout/AppLayout.jsx";
 
 const Login = lazy(() => import("./pages/Login.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));

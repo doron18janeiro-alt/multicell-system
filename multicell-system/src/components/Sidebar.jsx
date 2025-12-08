@@ -9,7 +9,7 @@ import {
   Wallet,
   LogOut,
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import logo from "../assets/logo.png";
 
 const links = [

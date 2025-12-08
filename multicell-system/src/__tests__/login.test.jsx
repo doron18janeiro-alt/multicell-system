@@ -5,7 +5,7 @@ import Login from "../pages/Login";
 const loginMock = vi.fn();
 const navigateMock = vi.fn();
 
-vi.mock("../contexts/AuthContext", () => ({
+vi.mock("../contexts/AuthContext.jsx", () => ({
   useAuth: () => ({
     login: loginMock,
     proprietarioId: null,

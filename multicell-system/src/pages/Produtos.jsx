@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, ShoppingBag } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import useProdutos from "../hooks/useProdutos";
-import ProdutosModal from "../components/ProdutosModal";
-import { removerProduto } from "../services/produtosService";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import useProdutos from "../hooks/useProdutos.jsx";
+import ProdutosModal from "../components/ProdutosModal.jsx";
+import { removerProduto } from "../services/produtosService.js";
 import { money } from "../utils/money";
-import PrimeCard from "../components/ui/PrimeCard";
-import PrimeButton from "../components/ui/PrimeButton";
-import PrimeInput from "../components/ui/PrimeInput";
-import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
+import PrimeCard from "../components/ui/PrimeCard.jsx";
+import PrimeButton from "../components/ui/PrimeButton.jsx";
+import PrimeInput from "../components/ui/PrimeInput.jsx";
+import PrimeSectionTitle from "../components/ui/PrimeSectionTitle.jsx";
 
 export default function Produtos() {
   const { proprietarioId, loading: authLoading } = useAuth();

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
 import ClientesModal from "../components/ClientesModal";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import useClientes from "../hooks/useClientes";
 import { removerCliente } from "../services/clientesService";
 import PrimeCard from "../components/ui/PrimeCard";
