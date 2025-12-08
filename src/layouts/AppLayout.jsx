@@ -121,7 +121,6 @@ const layoutStyles = `
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: "🏠" },
   { path: "/os", label: "Ordens de Serviço", icon: "🛠️" },
-  { path: "/caixa", label: "Caixa", icon: "💰" },
   { path: "/estoque", label: "Estoque", icon: "📦" },
   { path: "/relatorios", label: "Relatórios", icon: "📊" },
   { path: "/config", label: "Configurações", icon: "⚙️" },

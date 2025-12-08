@@ -3,7 +3,6 @@ import LogoAnimada from "../components/LogoAnimada";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: "[D]" },
-  { label: "Caixa", path: "/caixa", icon: "[CX]" },
   { label: "Vendas", path: "/vendas", icon: "[VN]" },
   { label: "Produtos", path: "/produtos", icon: "[PR]" },
   { label: "Estoque", path: "/estoque", icon: "[ES]" },

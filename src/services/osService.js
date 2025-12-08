@@ -2,8 +2,9 @@ import { supabase } from "./supabaseClient";
 
 const TABLE = "os";
 
-const withOwnerFilter = (query, proprietarioId) =>
-  proprietarioId ? query.eq("proprietario_id", proprietarioId) : query;
+const ownerColumn = "usuario_id";
+const withOwnerFilter = (query, ownerId) =>
+  ownerId ? query.eq(ownerColumn, ownerId) : query;
 
 function normalizeError(error) {
   if (!error) return null;
@@ -11,8 +12,8 @@ function normalizeError(error) {
   return { ...error, message };
 }
 
-export async function listOs(proprietarioId, { search, status } = {}) {
-  if (!proprietarioId) {
+export async function listOs(ownerId, { search, status } = {}) {
+  if (!ownerId) {
     return { data: [], error: normalizeError(new Error("Sessão expirada.")) };
   }
 
@@ -20,7 +21,7 @@ export async function listOs(proprietarioId, { search, status } = {}) {
     supabase.from(TABLE).select("*").order("data_entrada", {
       ascending: false,
     }),
-    proprietarioId
+    ownerId
   );
 
   if (search) {
@@ -38,22 +39,22 @@ export async function listOs(proprietarioId, { search, status } = {}) {
   return { data: data || [], error: normalizeError(error) };
 }
 
-export async function getOsById(id, proprietarioId) {
+export async function getOsById(id, ownerId) {
   let query = supabase.from(TABLE).select("*").eq("id", id);
-  query = withOwnerFilter(query, proprietarioId);
+  query = withOwnerFilter(query, ownerId);
   const { data, error } = await query.single();
   return { data, error: normalizeError(error) };
 }
 
-export async function createOs(proprietarioId, payload) {
-  if (!proprietarioId) {
+export async function createOs(ownerId, payload) {
+  if (!ownerId) {
     return { data: null, error: normalizeError(new Error("Sessão expirada.")) };
   }
   const body = {
     ...payload,
     data_entrada: payload.data_entrada || new Date().toISOString(),
     status: payload.status || "aberta",
-    proprietario_id: proprietarioId,
+    [ownerColumn]: ownerId,
   };
   const { data, error } = await supabase
     .from(TABLE)
@@ -63,28 +64,25 @@ export async function createOs(proprietarioId, payload) {
   return { data, error: normalizeError(error) };
 }
 
-export async function updateOs(id, proprietarioId, payload) {
+export async function updateOs(id, ownerId, payload) {
   let query = supabase
     .from(TABLE)
     .update({ ...payload, updated_at: new Date().toISOString() })
     .eq("id", id);
-  query = withOwnerFilter(query, proprietarioId);
+  query = withOwnerFilter(query, ownerId);
   const { data, error } = await query.select().single();
   return { data, error: normalizeError(error) };
 }
 
-export async function deleteOs(id, proprietarioId) {
+export async function deleteOs(id, ownerId) {
   let query = supabase.from(TABLE).delete().eq("id", id);
-  query = withOwnerFilter(query, proprietarioId);
+  query = withOwnerFilter(query, ownerId);
   const { error } = await query;
   return { error: normalizeError(error) };
 }
 
-export async function getResumoOs(
-  proprietarioId,
-  { dataInicial, dataFinal } = {}
-) {
-  if (!proprietarioId) {
+export async function getResumoOs(ownerId, { dataInicial, dataFinal } = {}) {
+  if (!ownerId) {
     return {
       data: {
         total: 0,
@@ -99,7 +97,7 @@ export async function getResumoOs(
       .from(TABLE)
       .select("status, data_entrada")
       .order("data_entrada", { ascending: false }),
-    proprietarioId
+    ownerId
   );
 
   if (dataInicial) {

@@ -258,8 +258,8 @@ export default function Dashboard() {
                         "Cliente não informado"}
                     </td>
                     <td className="text-white/70">
-                      {venda.data_venda
-                        ? new Date(venda.data_venda).toLocaleString("pt-BR", {
+                      {venda.created_at
+                        ? new Date(venda.created_at).toLocaleString("pt-BR", {
                             day: "2-digit",
                             month: "short",
                             hour: "2-digit",

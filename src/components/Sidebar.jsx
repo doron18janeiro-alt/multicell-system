@@ -6,7 +6,6 @@ import {
   Users,
   ShoppingCart,
   Wrench,
-  Wallet,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -18,7 +17,6 @@ const links = [
   { label: "Clientes", icon: Users, to: "/clientes" },
   { label: "Vendas", icon: ShoppingCart, to: "/vendas" },
   { label: "Ordens de Serviço", icon: Wrench, to: "/os" },
-  { label: "Caixa", icon: Wallet, to: "/caixa" },
 ];
 
 export default function Sidebar() {
@@ -43,7 +41,11 @@ export default function Sidebar() {
             <img
               src={logo}
               alt="Multicell Logo"
-              className="w-20 drop-shadow-[0_0_25px_rgba(255,215,0,0.55)]"
+              className="w-20 drop-shadow-[0_0_25px_rgba(255,215,0,0.55)] z-10 relative"
+              onError={(e) => {
+                if (e.currentTarget.src.endsWith("/icons/logo.png")) return;
+                e.currentTarget.src = "/icons/logo.png";
+              }}
             />
             <div className="space-y-1">
               <p className="text-xs tracking-[0.6em] text-[#cdb88d]">

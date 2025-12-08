@@ -1,0 +1,2 @@
+-- Será sobrescrito pelo comando: supabase db dump --schema-only --file backup/schema.sql
+-- Mantido como placeholder para versionar junto ao repositório.

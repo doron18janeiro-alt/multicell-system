@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getResumoVendas } from "../services/caixaService";
+import useAuth from "../hooks/useAuth";
 import { getResumoOs } from "../services/osService";
+import { obterResumoVendas } from "../services/relatoriosService";
 import { exportCSV } from "../utils/exportCSV";
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -79,6 +80,7 @@ const describeDay = (iso) => {
 };
 
 export default function Relatorios() {
+  const { proprietarioId } = useAuth();
   const initialRange = useMemo(() => getInitialRange(), []);
   const [range, setRange] = useState(initialRange);
   const [formRange, setFormRange] = useState(initialRange);
@@ -120,34 +122,47 @@ export default function Relatorios() {
     [resumo, ticketMedio]
   );
 
-  const loadResumo = useCallback(async (dataInicial, dataFinal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [vendasResp, osResp] = await Promise.all([
-        getResumoVendas({ dataInicial, dataFinal }),
-        getResumoOs({ dataInicial, dataFinal }),
-      ]);
-
-      setResumo({
-        vendas: vendasResp.data || emptyResumoVendas(),
-        os: osResp.data || emptyResumoOs(),
-      });
-
-      if (vendasResp.error || osResp.error) {
-        throw vendasResp.error || osResp.error;
+  const loadResumo = useCallback(
+    async (dataInicial, dataFinal) => {
+      if (!proprietarioId) {
+        setError("Sessão expirada. Faça login novamente.");
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error("[Relatorios] Erro ao carregar resumos", err);
-      setError(err?.message || "Não foi possível carregar os dados.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+
+      setLoading(true);
+      setError(null);
+      try {
+        const [vendasResp, osResp] = await Promise.all([
+          obterResumoVendas(proprietarioId, { dataInicial, dataFinal }),
+          getResumoOs(proprietarioId, { dataInicial, dataFinal }),
+        ]);
+
+        setResumo({
+          vendas: vendasResp.data || emptyResumoVendas(),
+          os: osResp.data || emptyResumoOs(),
+        });
+
+        if (vendasResp.error || osResp.error) {
+          throw vendasResp.error || osResp.error;
+        }
+      } catch (err) {
+        console.error("[Relatorios] Erro ao carregar resumos", err);
+        setError(err?.message || "Não foi possível carregar os dados.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [proprietarioId]
+  );
 
   useEffect(() => {
-    loadResumo(range.dataInicial, range.dataFinal);
-  }, [range, loadResumo]);
+    if (proprietarioId) {
+      loadResumo(range.dataInicial, range.dataFinal);
+    } else {
+      setLoading(false);
+    }
+  }, [range, loadResumo, proprietarioId]);
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;

@@ -1,7 +1,9 @@
 import { supabase } from "./supabaseClient";
 
-export async function registrarVenda(proprietarioId, venda, itens = []) {
-  if (!proprietarioId) {
+const ownerColumn = "usuario_id";
+
+export async function registrarVenda(ownerId, venda, itens = []) {
+  if (!ownerId) {
     return { error: new Error("proprietarioId é obrigatório."), data: null };
   }
 
@@ -14,8 +16,8 @@ export async function registrarVenda(proprietarioId, venda, itens = []) {
 
   const payload = {
     ...venda,
-    proprietario_id: proprietarioId,
-    data_venda: venda?.data_venda || new Date().toISOString(),
+    [ownerColumn]: ownerId,
+    created_at: venda?.created_at || new Date().toISOString(),
     status: venda?.status || "concluido",
     total_bruto: Number(venda?.total_bruto || 0),
     desconto: Number(venda?.desconto || 0),
@@ -68,28 +70,28 @@ export async function registrarVenda(proprietarioId, venda, itens = []) {
 }
 
 export async function listarVendas(
-  proprietarioId,
+  ownerId,
   { clienteId, dataInicial, dataFinal, limite = 50 } = {}
 ) {
-  if (!proprietarioId) {
+  if (!ownerId) {
     return { data: [], error: new Error("proprietarioId é obrigatório.") };
   }
 
   let query = supabase
     .from("vendas")
     .select("*")
-    .eq("proprietario_id", proprietarioId)
-    .order("data_venda", { ascending: false })
+    .eq(ownerColumn, ownerId)
+    .order("created_at", { ascending: false })
     .limit(limite);
 
   if (clienteId) {
     query = query.eq("cliente_id", clienteId);
   }
   if (dataInicial) {
-    query = query.gte("data_venda", dataInicial);
+    query = query.gte("created_at", dataInicial);
   }
   if (dataFinal) {
-    query = query.lte("data_venda", dataFinal);
+    query = query.lte("created_at", dataFinal);
   }
 
   const { data, error } = await query;

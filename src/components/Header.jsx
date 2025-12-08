@@ -19,7 +19,15 @@ function Header() {
   return (
     <header className="header-container header-animate">
       <div className="header-left">
-        <img src={Logo} alt="Logo Multicell" className="header-logo" />
+        <img
+          src={Logo}
+          alt="Logo Multicell"
+          className="header-logo"
+          onError={(e) => {
+            if (e.currentTarget.src.endsWith("/icons/logo.png")) return;
+            e.currentTarget.src = "/icons/logo.png";
+          }}
+        />
 
         <div className="header-title-block">
           <h1 className="header-title">MULTICELL SYSTEM</h1>

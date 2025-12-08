@@ -9,7 +9,6 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Produtos = lazy(() => import("./pages/Produtos"));
 const Clientes = lazy(() => import("./pages/Clientes"));
 const Os = lazy(() => import("./pages/Os"));
-const Caixa = lazy(() => import("./pages/Caixa"));
 const Estoque = lazy(() => import("./pages/Estoque"));
 const Vendas = lazy(() => import("./pages/Vendas"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
@@ -63,7 +62,6 @@ export default function App() {
               <Route path="/produtos" element={<Produtos />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/os" element={<Os />} />
-              <Route path="/caixa" element={<Caixa />} />
               <Route path="/estoque" element={<Estoque />} />
               <Route path="/vendas" element={<Vendas />} />
               <Route path="/relatorios" element={<Relatorios />} />
