@@ -1,0 +1,11 @@
+{
+  "short_name": "Multicell",
+  "name": "Multicell System",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import LogoAnimada from "../components/LogoAnimada";
+import LogoAnimada from "@/components/LogoAnimada";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: "[D]" },

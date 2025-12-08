@@ -1,26 +1,22 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Suspense, lazy } from "react";
-import { AuthProvider } from "./contexts/AuthContext.jsx";
-import PrivateRoute from "./routes/PrivateRoute.jsx";
-import AppLayout from "./layout/AppLayout.jsx";
+import { AuthProvider } from "@/contexts/AuthContext.jsx";
+import PrivateRoute from "@/routes/PrivateRoute.jsx";
+import AppLayout from "@/layout/AppLayout.jsx";
 
-const Login = lazy(() => import("./pages/Login.jsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
-const Produtos = lazy(() => import("./pages/Produtos.jsx"));
-const Clientes = lazy(() => import("./pages/Clientes.jsx"));
-const Os = lazy(() => import("./pages/OS.jsx"));
-const Estoque = lazy(() => import("./pages/Estoque.jsx"));
-const Vendas = lazy(() => import("./pages/Vendas.jsx"));
-const Relatorios = lazy(() => import("./pages/Relatorios.jsx"));
-const Config = lazy(() => import("./pages/Config.jsx"));
-const ConfigUsuarios = lazy(() => import("./pages/ConfigUsuarios.jsx"));
-const TermoGarantia = lazy(() => import("./pages/TermoGarantia.jsx"));
-const Historico = lazy(() => import("./pages/Historico.jsx"));
-const DespesasList = lazy(() => import("./pages/Despesas/Despesas.jsx"));
-const NovaDespesa = lazy(() => import("./pages/Despesas/NovaDespesa.jsx"));
-const DetalhesDespesa = lazy(() =>
-  import("./pages/Despesas/DetalhesDespesa.jsx")
-);
+const Login = lazy(() => import("@/pages/Login.jsx"));
+const Dashboard = lazy(() => import("@/pages/Dashboard.jsx"));
+const Produtos = lazy(() => import("@/pages/Produtos.jsx"));
+const Clientes = lazy(() => import("@/pages/Clientes.jsx"));
+const Os = lazy(() => import("@/pages/Os.jsx"));
+const Estoque = lazy(() => import("@/pages/Estoque.jsx"));
+const Vendas = lazy(() => import("@/pages/Vendas.jsx"));
+const Relatorios = lazy(() => import("@/pages/Relatorios.jsx"));
+const Config = lazy(() => import("@/pages/Config.jsx"));
+const ConfigUsuarios = lazy(() => import("@/pages/ConfigUsuarios.jsx"));
+const TermoGarantia = lazy(() => import("@/pages/TermoGarantia.jsx"));
+const Historico = lazy(() => import("@/pages/Historico.jsx"));
+const Despesas = lazy(() => import("@/pages/Despesas.jsx"));
 
 function CinematicFallback() {
   return (
@@ -72,9 +68,7 @@ export default function App() {
               <Route path="/garantia" element={<TermoGarantia />} />
               <Route path="/garantia/:id" element={<TermoGarantia />} />
               <Route path="/historico" element={<Historico />} />
-              <Route path="/despesas" element={<DespesasList />} />
-              <Route path="/despesas/nova" element={<NovaDespesa />} />
-              <Route path="/despesas/:id" element={<DetalhesDespesa />} />
+              <Route path="/despesas" element={<Despesas />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

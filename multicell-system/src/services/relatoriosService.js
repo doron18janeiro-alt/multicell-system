@@ -81,7 +81,7 @@ export async function obterVendasRecentes(proprietarioId) {
   const { data, error, count } = await supabase
     .from("vendas")
     .select(
-      "id,criado_em,forma_pagamento,total_liquido,total_bruto,total,cliente:clientes(nome)",
+      "id,data,data_venda,criado_em,forma_pagamento,valor_total,total_liquido,total_bruto,total,cliente:clientes(nome)",
       { count: "exact" }
     )
     .eq("proprietario_id", proprietarioId)
@@ -115,7 +115,7 @@ export async function obterResumoVendas(
   let query = supabase
     .from("vendas")
     .select(
-      "total_liquido,total_bruto,total,desconto,forma_pagamento,criado_em"
+      "valor_total,total_liquido,total_bruto,total,desconto,forma_pagamento,criado_em"
     )
     .eq("proprietario_id", ownerId)
     .order("criado_em", { ascending: false });
@@ -148,7 +148,13 @@ export async function obterResumoVendas(
 
   rows.forEach((row) => {
     const valor =
-      Number(row.total_liquido ?? row.total_bruto ?? row.total ?? 0) || 0;
+      Number(
+        row.valor_total ??
+          row.total_liquido ??
+          row.total_bruto ??
+          row.total ??
+          0
+      ) || 0;
     resumo.total += valor;
     const pagamento = normalizeFormaPagamento(row.forma_pagamento);
     resumo.porPagamento[pagamento] += valor;
@@ -163,7 +169,7 @@ export async function obterResumoMensal(proprietarioId) {
   const { data, error } = await supabase
     .from("vendas")
     .select(
-      "id,total_bruto,total_liquido,total,desconto,criado_em,forma_pagamento"
+      "id,valor_total,total_bruto,total_liquido,total,desconto,data,data_venda,criado_em,forma_pagamento"
     )
     .eq("proprietario_id", proprietarioId)
     .gte("criado_em", inicioMes);
@@ -173,12 +179,15 @@ export async function obterResumoMensal(proprietarioId) {
     throw error;
   }
 
-  const totalLiquido = (data || []).reduce(
-    (acc, venda) => acc + (Number(venda.total_liquido) || 0),
-    0
-  );
-  const totalBruto = (data || []).reduce(
-    (acc, venda) => acc + (Number(venda.total_bruto) || 0),
+  const totalValor = (data || []).reduce(
+    (acc, venda) =>
+      acc +
+      (Number(
+        venda.valor_total ??
+          venda.total_liquido ??
+          venda.total_bruto ??
+          venda.total
+      ) || 0),
     0
   );
   const descontos = (data || []).reduce(
@@ -186,15 +195,15 @@ export async function obterResumoMensal(proprietarioId) {
     0
   );
   const quantidade = data?.length || 0;
-  const ticketMedio = quantidade ? totalLiquido / quantidade : 0;
+  const ticketMedio = quantidade ? totalValor / quantidade : 0;
 
   return {
     inicioMes,
-    totalLiquido,
-    totalBruto,
+    totalValor,
     descontos,
     quantidade,
     ticketMedio,
+    totalLiquido: totalValor, // compat anterior
   };
 }
 

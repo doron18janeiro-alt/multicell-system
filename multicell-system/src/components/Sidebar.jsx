@@ -5,19 +5,21 @@ import {
   Box,
   Users,
   ShoppingCart,
+  Wallet,
   Wrench,
   FileText,
   Settings,
   LogOut,
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import logo from "../assets/logo.png";
+import { useAuth } from "@/contexts/AuthContext.jsx";
+import Logo from "@/assets/logo.png";
 
 const links = [
   { label: "Dashboard", icon: BarChart3, to: "/dashboard" },
   { label: "Produtos", icon: Box, to: "/produtos" },
   { label: "Clientes", icon: Users, to: "/clientes" },
   { label: "Vendas", icon: ShoppingCart, to: "/vendas" },
+  { label: "Despesas", icon: Wallet, to: "/despesas" },
   { label: "Ordens de Serviço", icon: Wrench, to: "/os" },
   { label: "Relatórios", icon: FileText, to: "/relatorios" },
   { label: "Configurações", icon: Settings, to: "/config" },
@@ -43,7 +45,7 @@ export default function Sidebar() {
         <div className="px-6 pt-10">
           <div className="flex flex-col items-center text-center gap-4">
             <img
-              src={logo}
+              src={Logo}
               alt="Multicell Logo"
               className="w-20 drop-shadow-[0_0_25px_rgba(255,215,0,0.55)]"
             />

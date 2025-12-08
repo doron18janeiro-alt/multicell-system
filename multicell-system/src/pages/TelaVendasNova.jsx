@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, ShoppingCart, Trash2 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import useClientes from "../hooks/useClientes";
-import useProdutos from "../hooks/useProdutos";
-import { registrarVenda } from "../services/vendasService";
-import { atualizarProduto } from "../services/produtosService";
-import PrimeCard from "../components/ui/PrimeCard";
-import PrimeButton from "../components/ui/PrimeButton";
-import PrimeInput from "../components/ui/PrimeInput";
-import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
+import { useAuth } from "@/contexts/AuthContext.jsx";
+import useClientes from "@/hooks/useClientes";
+import useProdutos from "@/hooks/useProdutos";
+import { registrarVenda } from "@/services/vendasService";
+import { atualizarProduto } from "@/services/produtosService";
+import PrimeCard from "@/components/ui/PrimeCard";
+import PrimeButton from "@/components/ui/PrimeButton";
+import PrimeInput from "@/components/ui/PrimeInput";
+import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle";
 
 const FORMAS_PAGAMENTO = [
   { label: "Pix", value: "pix" },

@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import Logo from "../assets/logo.png";
+import { useAuth } from "@/contexts/AuthContext.jsx";
+import Logo from "@/assets/logo.png";
 import "./Header.css";
 
 function Header() {

@@ -1,16 +1,18 @@
-// Arquivo legado removido após reorganização de rotas
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
-const AppLayout = lazy(() => import("./layouts/AppLayout.jsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
-const Os = lazy(() => import("./pages/OS.jsx"));
-const DetalhesOS = lazy(() => import("./pages/OS/DetalhesOS.jsx"));
-const Estoque = lazy(() => import("./pages/Estoque.jsx"));
-const DetalhesProduto = lazy(() => import("./pages/Produtos/DetalhesProduto.jsx"));
-const Relatorios = lazy(() => import("./pages/Relatorios.jsx"));
-const Config = lazy(() => import("./pages/Config.jsx"));
-const Login = lazy(() => import("./pages/Login.jsx"));
+const AppLayout = lazy(() => import("@/layout/AppLayout.jsx"));
+const Dashboard = lazy(() => import("@/pages/Dashboard.jsx"));
+const Os = lazy(() => import("@/pages/Os.jsx"));
+const DetalhesOS = lazy(() => import("@/pages/OS/DetalhesOS.jsx"));
+const Estoque = lazy(() => import("@/pages/Estoque.jsx"));
+const DetalhesProduto = lazy(() =>
+  import("@/pages/Produtos/DetalhesProduto.jsx")
+);
+const Relatorios = lazy(() => import("@/pages/Relatorios.jsx"));
+const Config = lazy(() => import("@/pages/Config.jsx"));
+const Despesas = lazy(() => import("@/pages/Despesas.jsx"));
+const Login = lazy(() => import("@/pages/Login.jsx"));
 
 function CinematicFallback() {
   return (
@@ -27,14 +29,6 @@ function CinematicFallback() {
           <p className="text-lg font-semibold text-white">
             Preparando módulos avançados…
           </p>
-        {
-          path: "os/:id",
-          element: (
-            <ProtectedRoute user={user}>
-              {withSuspense(<DetalhesOS />)}
-            </ProtectedRoute>
-          ),
-        },
         </div>
       </div>
     </div>
@@ -82,6 +76,14 @@ export function createAppRouter({ user, onLogout }) {
           ),
         },
         {
+          path: "os/:id",
+          element: (
+            <ProtectedRoute user={user}>
+              {withSuspense(<DetalhesOS />)}
+            </ProtectedRoute>
+          ),
+        },
+        {
           path: "estoque",
           element: (
             <ProtectedRoute user={user}>
@@ -110,6 +112,14 @@ export function createAppRouter({ user, onLogout }) {
           element: (
             <ProtectedRoute user={user}>
               {withSuspense(<Config />)}
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: "despesas",
+          element: (
+            <ProtectedRoute user={user}>
+              {withSuspense(<Despesas />)}
             </ProtectedRoute>
           ),
         },

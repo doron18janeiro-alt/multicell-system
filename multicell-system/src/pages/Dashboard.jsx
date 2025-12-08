@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, Activity, Diamond, ShoppingBag } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import PrimeCard from "../components/ui/PrimeCard";
-import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
+import { useAuth } from "@/contexts/AuthContext.jsx";
+import PrimeCard from "@/components/ui/PrimeCard";
+import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle";
+import { getDespesas } from "@/hooks/useDespesas.js";
 import {
   obterFaturamentoDiario,
   obterResumoMensal,
   obterTopProdutos,
   obterVendasRecentes,
-} from "../services/relatoriosService";
+} from "@/services/relatoriosService";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [faturamento, setFaturamento] = useState([]);
   const [topProdutos, setTopProdutos] = useState([]);
   const [vendasRecentes, setVendasRecentes] = useState([]);
+  const [totalDespesas, setTotalDespesas] = useState(0);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
@@ -38,13 +40,19 @@ export default function Dashboard() {
       obterFaturamentoDiario(proprietarioId),
       obterTopProdutos(proprietarioId),
       obterVendasRecentes(proprietarioId),
+      getDespesas(),
     ])
-      .then(([resumo, faturamentoDados, produtos, vendas]) => {
+      .then(([resumo, faturamentoDados, produtos, vendas, despesasLista]) => {
         if (!ativo) return;
         setResumoMensal(resumo);
         setFaturamento(faturamentoDados);
         setTopProdutos(produtos);
         setVendasRecentes(vendas?.itens || []);
+        const totalDespesasCalculado = (despesasLista || []).reduce(
+          (acc, item) => acc + Number(item.valor || 0),
+          0
+        );
+        setTotalDespesas(totalDespesasCalculado);
       })
       .catch((error) => {
         console.error("[Dashboard] Falha ao carregar métricas", error);
@@ -66,7 +74,9 @@ export default function Dashboard() {
 
   const vendasTotais = resumoMensal?.quantidade || 0;
   const ticketMedio = resumoMensal?.ticketMedio || 0;
-  const totalLiquido = resumoMensal?.totalLiquido || 0;
+  const totalValor =
+    resumoMensal?.totalValor ?? resumoMensal?.totalLiquido ?? 0;
+  const faturamentoLiquido = totalValor - totalDespesas;
 
   const faturamentoMax = useMemo(() => {
     return Math.max(...faturamento.map((item) => item.total || 0), 1);
@@ -91,8 +101,8 @@ export default function Dashboard() {
   const metricCards = [
     {
       label: "Faturamento líquido",
-      value: currency.format(totalLiquido),
-      helper: "Atualizado este mês",
+      value: currency.format(faturamentoLiquido),
+      helper: `Descontadas despesas (${currency.format(totalDespesas)})`,
       icon: Diamond,
       gradient: "from-[#2b1c1f] via-[#1a1018] to-[#050308]",
     },
@@ -271,7 +281,13 @@ export default function Dashboard() {
                       {venda.forma_pagamento || "--"}
                     </td>
                     <td className="text-right font-semibold text-[#ffe8a3]">
-                      {currency.format(venda.total_liquido || 0)}
+                      {currency.format(
+                        Number(
+                          venda.valor_total ??
+                            venda.total_liquido ??
+                            venda.total
+                        ) || 0
+                      )}
                     </td>
                   </tr>
                 ))}
