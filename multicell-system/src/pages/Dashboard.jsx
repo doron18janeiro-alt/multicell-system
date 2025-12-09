@@ -9,7 +9,7 @@ import {
   obterResumoMensal,
   obterTopProdutos,
   obterVendasRecentes,
-} from "@/services/relatoriosService";
+} from "@/services/relatorios";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -35,37 +35,50 @@ export default function Dashboard() {
     setCarregando(true);
     setErro("");
 
-    Promise.all([
-      obterResumoMensal(proprietarioId),
-      obterFaturamentoDiario(proprietarioId),
-      obterTopProdutos(proprietarioId),
-      obterVendasRecentes(proprietarioId),
-      getDespesas(),
-    ])
-      .then(([resumo, faturamentoDados, produtos, vendas, despesasLista]) => {
-        if (!ativo) return;
-        setResumoMensal(resumo);
-        setFaturamento(faturamentoDados);
-        setTopProdutos(produtos);
-        setVendasRecentes(vendas?.itens || []);
-        const totalDespesasCalculado = (despesasLista || []).reduce(
-          (acc, item) => acc + Number(item.valor || 0),
-          0
-        );
-        setTotalDespesas(totalDespesasCalculado);
-      })
-      .catch((error) => {
-        console.error("[Dashboard] Falha ao carregar métricas", error);
-        if (ativo) {
-          setErro(
-            error?.message ||
-              "Não foi possível carregar o painel. Tente novamente."
-          );
-        }
-      })
-      .finally(() => {
-        if (ativo) setCarregando(false);
-      });
+    const carregar = async () => {
+      const [resumo, faturamentoDados, produtos, vendas, despesasLista] =
+        await Promise.all([
+          obterResumoMensal(proprietarioId),
+          obterFaturamentoDiario(proprietarioId),
+          obterTopProdutos(proprietarioId),
+          obterVendasRecentes(proprietarioId),
+          getDespesas(proprietarioId),
+        ]);
+
+      if (!ativo) return;
+
+      const erros = [
+        resumo?.error,
+        faturamentoDados?.error,
+        produtos?.error,
+        vendas?.error,
+        despesasLista?.error,
+      ].filter(Boolean);
+
+      if (erros.length) {
+        const mensagem =
+          erros[0] || "Não foi possível carregar o painel. Tente novamente.";
+        console.error("[Dashboard] Falha ao carregar métricas", erros);
+        setErro(mensagem);
+        window.alert(mensagem);
+      }
+
+      setResumoMensal(resumo?.data || null);
+      setFaturamento(faturamentoDados?.data || []);
+      setTopProdutos(produtos?.data || []);
+      setVendasRecentes(vendas?.data?.itens || vendas?.data || []);
+
+      const despesas = despesasLista?.data || [];
+      const totalDespesasCalculado = despesas.reduce(
+        (acc, item) => acc + Number(item.valor || 0),
+        0
+      );
+      setTotalDespesas(totalDespesasCalculado);
+    };
+
+    carregar().finally(() => {
+      if (ativo) setCarregando(false);
+    });
 
     return () => {
       ativo = false;

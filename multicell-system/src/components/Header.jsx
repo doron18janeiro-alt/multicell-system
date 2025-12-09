@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext.jsx";
-import Logo from "@/assets/logo.png";
+import Logo from "@/components/Logo";
 import "./Header.css";
 
 function Header() {
@@ -19,7 +19,7 @@ function Header() {
   return (
     <header className="header-container header-animate">
       <div className="header-left">
-        <img src={Logo} alt="Logo Multicell" className="header-logo" />
+        <Logo alt="Logo" className="h-10 header-logo" />
 
         <div className="header-title-block">
           <h1 className="header-title">MULTICELL SYSTEM</h1>

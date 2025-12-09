@@ -12,7 +12,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext.jsx";
-import Logo from "@/assets/logo.png";
+import Logo from "@/components/Logo";
 
 const links = [
   { label: "Dashboard", icon: BarChart3, to: "/dashboard" },
@@ -44,10 +44,9 @@ export default function Sidebar() {
       <div className="flex h-full flex-col justify-between">
         <div className="px-6 pt-10">
           <div className="flex flex-col items-center text-center gap-4">
-            <img
-              src={Logo}
-              alt="Multicell Logo"
-              className="w-20 drop-shadow-[0_0_25px_rgba(255,215,0,0.55)]"
+            <Logo
+              alt="Logo"
+              className="h-10 w-20 drop-shadow-[0_0_25px_rgba(255,215,0,0.55)]"
             />
             <div className="space-y-1">
               <p className="text-xs tracking-[0.6em] text-[#cdb88d]">

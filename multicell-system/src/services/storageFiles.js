@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 
 function normalizarLista(files) {
   if (!files) return [];
@@ -12,7 +12,7 @@ function normalizarLista(files) {
 }
 
 function montarCaminho(entidade, entidadeId, nomeOriginal = "arquivo") {
-  const nomeSanitizado = nomeOriginal
+  const nomeSanitizado = (nomeOriginal || "arquivo")
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9._-]/g, "");
@@ -24,11 +24,13 @@ function montarCaminho(entidade, entidadeId, nomeOriginal = "arquivo") {
 
 export async function uploadFilesForEntity({ entidade, entidadeId, files }) {
   if (!entidade || !entidadeId) {
-    throw new Error("Entidade e entidadeId são obrigatórios para upload");
+    const message = "Entidade e entidadeId são obrigatórios para upload";
+    console.error("[StorageFiles] uploadFilesForEntity:", message);
+    return { data: [], error: message };
   }
 
   const arquivos = normalizarLista(files).filter(Boolean);
-  if (!arquivos.length) return [];
+  if (!arquivos.length) return { data: [], error: null };
 
   const registros = [];
 
@@ -40,7 +42,9 @@ export async function uploadFilesForEntity({ entidade, entidadeId, files }) {
       .upload(caminho, arquivo, { upsert: false });
 
     if (uploadError) {
-      throw uploadError;
+      const message = uploadError.message || "Erro ao enviar arquivo";
+      console.error("[StorageFiles] upload:", message);
+      return { data: registros, error: message };
     }
 
     const { data: publicData } = supabase.storage
@@ -60,24 +64,30 @@ export async function uploadFilesForEntity({ entidade, entidadeId, files }) {
 
     const { data, error } = await supabase
       .from("storage_files")
-      .insert(registro)
+      .insert(registro, { returning: "representation" })
       .select()
       .single();
 
     if (error) {
-      throw error;
+      const message = error.message || "Erro ao registrar arquivo";
+      console.error("[StorageFiles] insert:", message);
+      return { data: registros, error: message };
     }
 
     registros.push(data);
   }
 
-  return registros;
+  return { data: registros, error: null };
 }
 
 export async function listFilesForEntity({ entidade, entidadeId }) {
-  if (!entidade || !entidadeId) return [];
+  if (!entidade || !entidadeId) {
+    const message = "Entidade e entidadeId são obrigatórios.";
+    console.error("[StorageFiles] listFilesForEntity:", message);
+    return { data: [], error: message };
+  }
 
-  const { data, error } = await supabase
+  const result = await supabase
     .from("storage_files")
     .select(
       "id, entidade, entidade_id, nome_arquivo, caminho, url_publica, criado_em, tamanho, tipo"
@@ -86,25 +96,35 @@ export async function listFilesForEntity({ entidade, entidadeId }) {
     .eq("entidade_id", entidadeId)
     .order("criado_em", { ascending: false });
 
-  if (error) {
-    throw error;
+  if (result.error) {
+    const message = result.error.message || "Erro ao listar arquivos";
+    console.error("[StorageFiles] list:", message);
+    return { data: [], error: message };
   }
 
-  return data || [];
+  return { data: result.data || [], error: null };
 }
 
 export async function deleteFileById(id) {
-  if (!id) return null;
+  if (!id) {
+    const message = "ID é obrigatório.";
+    console.error("[StorageFiles] deleteFileById:", message);
+    return { data: null, error: message };
+  }
 
-  const { data: registro, error } = await supabase
+  const registroResult = await supabase
     .from("storage_files")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (error) {
-    throw error;
+  if (registroResult.error) {
+    const message = registroResult.error.message || "Erro ao localizar arquivo";
+    console.error("[StorageFiles] fetch:", message);
+    return { data: null, error: message };
   }
+
+  const registro = registroResult.data;
 
   if (registro?.caminho) {
     const { error: storageError } = await supabase.storage
@@ -112,18 +132,23 @@ export async function deleteFileById(id) {
       .remove([registro.caminho]);
 
     if (storageError) {
-      throw storageError;
+      const message =
+        storageError.message || "Erro ao remover arquivo do storage";
+      console.error("[StorageFiles] storage delete:", message);
+      return { data: null, error: message };
     }
   }
 
   const { error: deleteError } = await supabase
     .from("storage_files")
-    .delete()
+    .delete({ returning: "representation" })
     .eq("id", id);
 
   if (deleteError) {
-    throw deleteError;
+    const message = deleteError.message || "Erro ao remover registro";
+    console.error("[StorageFiles] delete:", message);
+    return { data: null, error: message };
   }
 
-  return registro;
+  return { data: registro, error: null };
 }

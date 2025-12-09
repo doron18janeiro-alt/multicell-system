@@ -48,27 +48,30 @@ export default function ProdutosModal({ fechar, produto, onSubmit }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-        <h2 className="text-xl font-bold mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+      <div className="w-full max-w-lg rounded-[14px] bg-white text-slate-900 shadow-xl border border-slate-200 p-6">
+        <h2 className="text-xl font-semibold mb-1">
           {produto ? "Editar Produto" : "Novo Produto"}
         </h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Cadastre ou edite produtos com estoque e preço de venda.
+        </p>
 
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm">Nome</label>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Nome</label>
             <input
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
             />
           </div>
 
-          <div>
-            <label className="text-sm">Preço de venda</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Preço de venda</label>
             <input
               type="number"
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
               value={precoVenda}
               min="0"
               step="0.01"
@@ -76,11 +79,13 @@ export default function ProdutosModal({ fechar, produto, onSubmit }) {
             />
           </div>
 
-          <div>
-            <label className="text-sm">Quantidade em estoque</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">
+              Quantidade em estoque
+            </label>
             <input
               type="number"
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
               value={quantidade}
               min="0"
               onChange={(e) => setQuantidade(e.target.value)}
@@ -89,19 +94,23 @@ export default function ProdutosModal({ fechar, produto, onSubmit }) {
         </div>
 
         {erro && (
-          <div className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {erro}
           </div>
         )}
 
         <div className="mt-5 flex justify-end gap-3">
-          <button onClick={fechar} className="px-4 py-2 bg-gray-300 rounded">
+          <button
+            onClick={fechar}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+            disabled={salvando}
+          >
             Cancelar
           </button>
 
           <button
             onClick={salvar}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition disabled:opacity-60"
             disabled={salvando}
           >
             {salvando ? "Salvando..." : "Salvar"}

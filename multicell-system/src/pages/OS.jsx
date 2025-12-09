@@ -7,7 +7,7 @@ import FileGallery from "../components/files/FileGallery.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
-import { deleteOs, listOs } from "../services/osService";
+import { deleteOs, listOs } from "@/services/os";
 import PrimeCard from "../components/ui/PrimeCard.jsx";
 import PrimeButton from "../components/ui/PrimeButton.jsx";
 import PrimeInput from "../components/ui/PrimeInput.jsx";
@@ -195,7 +195,11 @@ export default function OsPage() {
   }, [debouncedSearch, status, proprietarioId]);
 
   async function loadOs() {
-    if (!proprietarioId) return;
+    if (!proprietarioId) {
+      setFeedback("Sessão expirada. Faça login novamente.");
+      setItems([]);
+      return;
+    }
     setLoadingList(true);
     setFeedback("");
     const { data, error } = await listOs(proprietarioId, {
@@ -203,10 +207,16 @@ export default function OsPage() {
       status,
     });
     if (error) {
-      console.error("Erro ao carregar OS", error);
-      setFeedback(error.message);
+      const mensagem =
+        error?.message || error || "Não foi possível listar as OS.";
+      console.error("OS:erro", mensagem);
+      setFeedback(mensagem);
+      window.alert(mensagem);
+      setItems([]);
+      setLoadingList(false);
+      return;
     }
-    setItems(data);
+    setItems(data || []);
     setLoadingList(false);
   }
 
@@ -215,7 +225,9 @@ export default function OsPage() {
       return;
     const { error } = await deleteOs(os.id, proprietarioId);
     if (error) {
-      alert(error.message);
+      const mensagem =
+        error?.message || error || "Não foi possível excluir a OS.";
+      alert(mensagem);
       return;
     }
     if (selected?.id === os.id) {
@@ -506,37 +518,37 @@ export default function OsPage() {
       </div>
 
       {termOs && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center print:static print:block">
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm print:static print:block">
           <div
-            className="absolute inset-0 bg-slate-950/70 print:hidden"
+            className="absolute inset-0 print:hidden"
             onClick={() => setTermOs(null)}
           />
-          <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl print:w-full print:max-w-none print:rounded-none print:border-0 print:bg-transparent print:p-0 print:shadow-none">
+          <div className="relative z-10 w-full max-w-4xl rounded-[14px] border border-slate-200 bg-white p-6 shadow-2xl text-slate-900 print:w-full print:max-w-none print:rounded-none print:border-0 print:bg-transparent print:p-0 print:shadow-none">
             <div className="flex items-center justify-between print:hidden">
               <div>
-                <p className="text-xs uppercase tracking-[0.4em] text-slate-500">
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-500">
                   Termo de Garantia
                 </p>
-                <h2 className="text-2xl font-semibold text-white">
+                <h2 className="text-2xl font-semibold text-slate-900">
                   {termOs.cliente_nome}
                 </h2>
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200"
+                  className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200"
                   onClick={() => window.print()}
                 >
                   Imprimir
                 </button>
                 <button
-                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200"
+                  className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-200"
                   onClick={() => setTermOs(null)}
                 >
                   Fechar
                 </button>
               </div>
             </div>
-            <div className="mt-6 rounded-2xl bg-white p-6 text-slate-900 print:p-0">
+            <div className="mt-6 rounded-[12px] bg-white p-0 text-slate-900 print:p-0">
               <TermoGarantia os={termOs} />
             </div>
           </div>

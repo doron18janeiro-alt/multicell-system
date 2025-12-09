@@ -4,7 +4,7 @@ import {
   createProduto,
   updateProduto,
   inativarProduto,
-} from "../services/estoqueService";
+} from "@/services/produtos";
 
 const resumoInicial = {
   totalSkus: 0,
@@ -13,9 +13,9 @@ const resumoInicial = {
 };
 
 export default function useEstoque(proprietarioId, filtrosIniciais = {}) {
-  const [produtos, setProdutos] = useState([]);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState("");
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [categoriaOptions, setCategoriaOptions] = useState([]);
   const [resumo, setResumo] = useState(resumoInicial);
   const filtrosRef = useRef(filtrosIniciais);
@@ -35,40 +35,38 @@ export default function useEstoque(proprietarioId, filtrosIniciais = {}) {
   const carregarProdutos = useCallback(
     async (filtros) => {
       if (!proprietarioId) {
-        setProdutos([]);
+        setData([]);
         setResumo(resumoInicial);
+        setError("Sessão expirada. Faça login novamente.");
+        setLoading(false);
         return;
       }
 
       const filtrosAtuais = filtros ?? filtrosRef.current ?? {};
       filtrosRef.current = filtrosAtuais;
-      setCarregando(true);
-      setErro("");
+      setLoading(true);
+      setError(null);
 
-      try {
-        const { data, error } = await listProdutos(
-          proprietarioId,
-          filtrosAtuais
-        );
-        if (error) throw error;
-        const lista = data || [];
-        setProdutos(lista);
-        setCategoriaOptions(() => {
-          const unique = new Set();
-          lista.forEach((item) => {
-            if (item.categoria) unique.add(item.categoria);
-          });
-          return Array.from(unique);
-        });
-        setResumo(calcularResumo(lista));
-      } catch (error) {
-        console.error("[useEstoque] listar", error);
-        setErro("Não foi possível carregar o estoque.");
-        setProdutos([]);
+      const { data, error } = await listProdutos(proprietarioId, filtrosAtuais);
+      if (error) {
+        console.error("useEstoque:erro", error);
+        setError(error?.message || error);
+        setData([]);
         setResumo(resumoInicial);
-      } finally {
-        setCarregando(false);
+        setLoading(false);
+        return;
       }
+      const lista = data || [];
+      setData(lista);
+      setCategoriaOptions(() => {
+        const unique = new Set();
+        lista.forEach((item) => {
+          if (item.categoria) unique.add(item.categoria);
+        });
+        return Array.from(unique);
+      });
+      setResumo(calcularResumo(lista));
+      setLoading(false);
     },
     [calcularResumo, proprietarioId]
   );
@@ -76,10 +74,15 @@ export default function useEstoque(proprietarioId, filtrosIniciais = {}) {
   const criar = useCallback(
     async (dados) => {
       if (!proprietarioId) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
       const { error } = await createProduto(proprietarioId, dados);
-      if (error) throw error;
+      if (error) {
+        console.error("useEstoque:erro", error);
+        setError(error?.message || error);
+        return;
+      }
       await carregarProdutos();
     },
     [carregarProdutos, proprietarioId]
@@ -88,10 +91,15 @@ export default function useEstoque(proprietarioId, filtrosIniciais = {}) {
   const atualizar = useCallback(
     async (id, dados) => {
       if (!proprietarioId) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
       const { error } = await updateProduto(id, proprietarioId, dados);
-      if (error) throw error;
+      if (error) {
+        console.error("useEstoque:erro", error);
+        setError(error?.message || error);
+        return;
+      }
       await carregarProdutos();
     },
     [carregarProdutos, proprietarioId]
@@ -100,10 +108,15 @@ export default function useEstoque(proprietarioId, filtrosIniciais = {}) {
   const inativar = useCallback(
     async (id) => {
       if (!proprietarioId) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
       const { error } = await inativarProduto(id, proprietarioId);
-      if (error) throw error;
+      if (error) {
+        console.error("useEstoque:erro", error);
+        setError(error?.message || error);
+        return;
+      }
       await carregarProdutos();
     },
     [carregarProdutos, proprietarioId]
@@ -115,9 +128,12 @@ export default function useEstoque(proprietarioId, filtrosIniciais = {}) {
   }, [carregarProdutos, proprietarioId, filtrosIniciais]);
 
   return {
-    produtos,
-    carregando,
-    erro,
+    produtos: data,
+    carregando: loading,
+    erro: error,
+    data,
+    loading,
+    error,
     resumo,
     categoriaOptions,
     carregarProdutos,

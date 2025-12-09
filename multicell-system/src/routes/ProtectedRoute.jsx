@@ -1,10 +1,20 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import { useAuth } from "@/contexts/AuthContext";
 
-export default function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+export function ProtectedRoute({ children }) {
+  const { signed, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div style={{ color: "white", textAlign: "center", marginTop: "40px" }}>
+        Validando sessão...
+      </div>
+    );
+  }
 
-  return user ? children : <Navigate to="/login" replace />;
+  if (!signed) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 }

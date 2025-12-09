@@ -3,32 +3,33 @@ import {
   listarClientes,
   criarCliente,
   atualizarCliente,
-} from "../services/clientesService";
+} from "@/services/clientes";
 
 export default function useClientes(proprietarioId) {
-  const [clientes, setClientes] = useState([]);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState("");
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const carregarClientes = useCallback(
     async (filtros) => {
       if (!proprietarioId) {
-        setClientes([]);
+        setData([]);
+        setLoading(false);
+        setError("Sessão expirada. Faça login novamente.");
         return;
       }
-      setCarregando(true);
-      setErro("");
+      setLoading(true);
+      setError(null);
 
-      try {
-        const { data, error } = await listarClientes(proprietarioId, filtros);
-        if (error) throw error;
-        setClientes(data || []);
-      } catch (error) {
-        console.error("[useClientes] listar", error);
-        setErro("Não foi possível carregar os clientes.");
-      } finally {
-        setCarregando(false);
+      const { data, error } = await listarClientes(proprietarioId, filtros);
+      if (error) {
+        console.error("useClientes:erro", error);
+        setError(error?.message || error);
+        setLoading(false);
+        return;
       }
+      setData(data || []);
+      setLoading(false);
     },
     [proprietarioId]
   );
@@ -36,10 +37,15 @@ export default function useClientes(proprietarioId) {
   const criar = useCallback(
     async (dados) => {
       if (!proprietarioId) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
       const { error } = await criarCliente(proprietarioId, dados);
-      if (error) throw error;
+      if (error) {
+        console.error("useClientes:erro", error);
+        setError(error?.message || error);
+        return;
+      }
       await carregarClientes();
     },
     [carregarClientes, proprietarioId]
@@ -48,10 +54,15 @@ export default function useClientes(proprietarioId) {
   const atualizar = useCallback(
     async (id, dados) => {
       if (!proprietarioId) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
       const { error } = await atualizarCliente(id, proprietarioId, dados);
-      if (error) throw error;
+      if (error) {
+        console.error("useClientes:erro", error);
+        setError(error?.message || error);
+        return;
+      }
       await carregarClientes();
     },
     [carregarClientes, proprietarioId]
@@ -62,9 +73,12 @@ export default function useClientes(proprietarioId) {
   }, [carregarClientes]);
 
   return {
-    clientes,
-    carregando,
-    erro,
+    clientes: data,
+    carregando: loading,
+    erro: error,
+    data,
+    loading,
+    error,
     carregarClientes,
     criar,
     atualizar,

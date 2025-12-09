@@ -1,92 +1,68 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Logo from "@/assets/logo.png";
-import { useAuth } from "@/contexts/AuthContext.jsx";
-import "./Login.css";
+import { useAuth } from "@/contexts/AuthContext";
+import Logo from "@/components/Logo";
 
 export default function Login() {
-  const navigate = useNavigate();
-  const { login, proprietarioId, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [mensagemErro, setMensagemErro] = useState("");
-  const [submetendo, setSubmetendo] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const { signed, login } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (proprietarioId) {
-      navigate("/dashboard", { replace: true });
+    if (signed) {
+      navigate("/", { replace: true });
     }
-  }, [navigate, proprietarioId]);
+  }, [signed, navigate]);
 
-  async function handleLogin(event) {
-    event.preventDefault();
-    if (submetendo || loading) return;
+  async function handleLogin(e) {
+    e.preventDefault();
+    setLoading(true);
+    setErro("");
 
-    setMensagemErro("");
-    setSubmetendo(true);
+    const { error } = await login(email, senha);
 
-    try {
-      await login(email.trim(), senha);
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
-      console.error("[Login] Falha ao autenticar", error);
-      const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "Não foi possível autenticar. Verifique suas credenciais.";
-      setMensagemErro(message);
-    } finally {
-      setSubmetendo(false);
+    if (error) {
+      const mensagem = error?.message || "Credenciais inválidas";
+      setErro(mensagem);
+      window.alert(mensagem);
+    } else {
+      navigate("/", { replace: true });
     }
+
+    setLoading(false);
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <img src={Logo} alt="Logo Multicell" className="login-logo" />
+    <div className="tela-login">
+      <div className="card-login">
+        <Logo className="logo-login" />
 
-        <h1 className="login-title">MULTICELL SYSTEM</h1>
-        <p className="login-subtitle">
-          Operações inteligentes, resultados imediatos.
-        </p>
+        <h2>MULTICELL SYSTEM</h2>
 
-        {mensagemErro && <div className="login-alert">{mensagemErro}</div>}
+        {erro && <p style={{ color: "red" }}>{erro}</p>}
 
-        <form className="login-form" onSubmit={handleLogin}>
+        <form onSubmit={handleLogin}>
           <input
+            placeholder="Email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            type="email"
-            placeholder="Seu e-mail"
-            className="login-input"
-            autoComplete="username"
-            required
+            onChange={(e) => setEmail(e.target.value)}
           />
 
           <input
-            value={senha}
-            onChange={(event) => setSenha(event.target.value)}
             type="password"
-            placeholder="Sua senha"
-            className="login-input"
-            autoComplete="current-password"
-            required
+            placeholder="Senha"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
           />
 
-          <button
-            type="submit"
-            className="login-button"
-            disabled={submetendo || loading}
-          >
-            {submetendo || loading ? "Entrando..." : "Entrar"}
+          <button type="submit" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-
-        <p className="login-hint">
-          Utilizamos o Supabase Auth para validar credenciais. Em ambientes de
-          teste sem hash, troque esta chamada por uma checagem simples na tabela
-          "proprietarios" e documente o uso de senha em texto plano.
-        </p>
       </div>
     </div>
   );

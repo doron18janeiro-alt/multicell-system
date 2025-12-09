@@ -61,57 +61,60 @@ export default function ClientesModal({ cliente, fechar, onSubmit }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-        <h2 className="text-xl font-bold mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+      <div className="w-full max-w-lg rounded-[14px] bg-white text-slate-900 shadow-xl border border-slate-200 p-6">
+        <h2 className="text-xl font-semibold mb-1">
           {cliente ? "Editar Cliente" : "Novo Cliente"}
         </h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Cadastre ou edite os dados do cliente.
+        </p>
 
-        <form className="space-y-3" onSubmit={salvar}>
-          <div>
-            <label className="text-sm">Nome</label>
+        <form className="space-y-4" onSubmit={salvar}>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Nome</label>
             <input
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
               value={dados.nome}
               onChange={(event) => handleChange("nome", event.target.value)}
               placeholder="Ex: Maria Souza"
             />
           </div>
 
-          <div>
-            <label className="text-sm">Telefone</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Telefone</label>
             <input
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
               value={dados.telefone}
               onChange={(event) => handleChange("telefone", event.target.value)}
               placeholder="(11) 99999-9999"
             />
           </div>
 
-          <div>
-            <label className="text-sm">CPF</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">CPF</label>
             <input
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
               value={dados.cpf}
               onChange={(event) => handleChange("cpf", event.target.value)}
               placeholder="000.000.000-00"
             />
           </div>
 
-          <div>
-            <label className="text-sm">Email</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Email</label>
             <input
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
               value={dados.email}
               onChange={(event) => handleChange("email", event.target.value)}
               placeholder="cliente@exemplo.com"
             />
           </div>
 
-          <div>
-            <label className="text-sm">Observações</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Observações</label>
             <textarea
-              className="w-full border rounded p-2"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none min-h-[96px]"
               rows={3}
               value={dados.observacoes}
               onChange={(event) =>
@@ -122,7 +125,7 @@ export default function ClientesModal({ cliente, fechar, onSubmit }) {
           </div>
 
           {erro && (
-            <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {erro}
             </div>
           )}
@@ -131,14 +134,14 @@ export default function ClientesModal({ cliente, fechar, onSubmit }) {
             <button
               type="button"
               onClick={fechar}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded"
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition disabled:opacity-60"
               disabled={salvando}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-60"
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 transition disabled:opacity-60"
               disabled={salvando}
             >
               {salvando ? "Salvando..." : "Salvar"}

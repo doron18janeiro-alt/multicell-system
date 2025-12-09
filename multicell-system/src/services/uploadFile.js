@@ -1,31 +1,37 @@
-import { supabase } from "../supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 
 export async function uploadFile(folder, file) {
-  try {
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("fotos")
-      .upload(filePath, file, {
-        upsert: false,
-      });
-
-    if (uploadError) throw uploadError;
-
-    const { data: publicURL } = supabase.storage
-      .from("fotos")
-      .getPublicUrl(filePath);
-
-    return {
-      url: publicURL.publicUrl,
-      path: filePath,
-    };
-  } catch (err) {
-    console.error("Erro ao fazer upload:", err.message);
-    throw err;
+  if (!folder || !file) {
+    const message = "Pasta e arquivo são obrigatórios.";
+    console.error("[UploadFile] uploadFile:", message);
+    return { data: null, error: message };
   }
-}
 
-console.log("uploadFile.js criado com sucesso");
+  const fileExt = file.name?.split(".").pop() || "bin";
+  const fileName = `${crypto.randomUUID()}.${fileExt}`;
+  const filePath = `${folder}/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("fotos")
+    .upload(filePath, file, {
+      upsert: false,
+    });
+
+  if (uploadError) {
+    const message = uploadError.message || "Erro ao fazer upload";
+    console.error("[UploadFile] upload:", message);
+    return { data: null, error: message };
+  }
+
+  const { data: publicURL } = supabase.storage
+    .from("fotos")
+    .getPublicUrl(filePath);
+
+  return {
+    data: {
+      url: publicURL?.publicUrl || null,
+      path: filePath,
+    },
+    error: null,
+  };
+}

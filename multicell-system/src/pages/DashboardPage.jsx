@@ -5,7 +5,7 @@ Implementação antiga mantida apenas para histórico. Dashboard.jsx
 é a versão ativa dentro das rotas protegidas.
 
 import { useEffect, useState } from "react";
-import { supabase } from "../services/supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 import { BarChart3, DollarSign, Users, ShoppingCart } from "lucide-react";
 
 export default function DashboardPage() {

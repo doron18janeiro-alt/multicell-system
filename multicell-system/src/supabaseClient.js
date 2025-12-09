@@ -1,186 +1,90 @@
-import { supabase } from "./services/supabaseClient";
-
-const safeDate = () => new Date().toISOString();
-const withOwner = (ownerId) => (ownerId ? { proprietario_id: ownerId } : {});
+import { supabase } from "@/services/supabaseClient";
+import {
+  listarProdutos,
+  criarProduto as criarProdutoService,
+  atualizarProduto as atualizarProdutoService,
+  removerProduto as removerProdutoService,
+  listProdutos,
+  createProduto as createProdutoEstoqueService,
+  updateProduto as updateProdutoEstoqueService,
+  inativarProduto,
+} from "@/services/produtos";
+import { listarVendas, registrarVenda } from "@/services/financeiro";
+import { listOs, createOs, updateOs, getResumoOs } from "@/services/os";
+import { getConfig, saveConfig } from "@/services/configService";
 
 export { supabase };
 
-const handleError = (label, error) => {
-  if (!error) return null;
-  console.error(`[Supabase] ${label}`, error);
-  return error;
-};
-
 export async function loadProdutos(ownerId) {
-  const { data, error } = await supabase
-    .from("produtos")
-    .select("*")
-    .match(withOwner(ownerId))
-    .order("created_at", { ascending: false });
-  handleError("carregar produtos", error);
-  return data || [];
+  return listarProdutos(ownerId);
 }
 
 export async function createProduto(payload, ownerId) {
-  const body = {
-    ...payload,
-    created_at: safeDate(),
-    ...withOwner(ownerId),
-  };
-  const { data, error } = await supabase
-    .from("produtos")
-    .insert(body)
-    .select()
-    .single();
-  handleError("criar produto", error);
-  return data;
+  return criarProdutoService(ownerId, payload);
 }
 
-export async function updateProduto(id, patch, ownerId) {
-  const { data, error } = await supabase
-    .from("produtos")
-    .update({ ...patch, updated_at: safeDate() })
-    .eq("id", id)
-    .match(withOwner(ownerId))
-    .select()
-    .single();
-  handleError("atualizar produto", error);
-  return data;
+export async function updateProduto(id, ownerId, patch) {
+  return atualizarProdutoService(id, ownerId, patch);
 }
 
 export async function deleteProduto(id, ownerId) {
-  const { error } = await supabase
-    .from("produtos")
-    .delete()
-    .eq("id", id)
-    .match(withOwner(ownerId));
-  handleError("excluir produto", error);
+  return removerProdutoService(id, ownerId);
 }
 
 export async function loadVendas(ownerId, { inicio, fim, limite = 50 } = {}) {
-  let query = supabase
-    .from("vendas")
-    .select("*")
-    .match(withOwner(ownerId))
-    .order("criado_em", { ascending: false })
-    .limit(limite);
-
-  if (inicio) query = query.gte("criado_em", inicio);
-  if (fim) query = query.lte("criado_em", fim);
-
-  const { data, error } = await query;
-  handleError("carregar vendas", error);
-  return data || [];
+  return listarVendas(ownerId, {
+    dataInicial: inicio,
+    dataFinal: fim,
+    limite,
+  });
 }
 
 export async function createVenda(venda, itensParaEstoque = [], ownerId) {
-  const body = {
-    ...venda,
-    criado_em: venda?.criado_em || venda?.created_at || safeDate(),
-    ...withOwner(ownerId),
-  };
-  const { data, error } = await supabase
-    .from("vendas")
-    .insert(body)
-    .select()
-    .single();
-  if (handleError("registrar venda", error)) return null;
-
-  for (const item of itensParaEstoque) {
-    if (!item.id) continue;
-    await supabase.rpc("decrementar_estoque", {
-      pid: item.id,
-      qtd: item.quantidade || 0,
-    });
-  }
-  return data;
+  const resultado = await registrarVenda(ownerId, venda, itensParaEstoque);
+  return resultado;
 }
 
-export async function loadOrdens(ownerId, { search } = {}) {
-  let query = supabase
-    .from("os")
-    .select("*")
-    .match(withOwner(ownerId))
-    .order("criado_em", { ascending: false });
-
-  if (search) {
-    const safe = search.trim();
-    if (safe) {
-      query = query.or(
-        `cliente_nome.ilike.%${safe}%,aparelho.ilike.%${safe}%,imei.ilike.%${safe}%`
-      );
-    }
-  }
-
-  const { data, error } = await query;
-  handleError("carregar OS", error);
-  return data || [];
+export async function loadOrdens(ownerId, { search, status } = {}) {
+  return listOs(ownerId, { search, status });
 }
 
 export async function createOrdem(payload, ownerId) {
-  const body = {
-    ...payload,
-    criado_em: payload?.criado_em || payload?.data_entrada || safeDate(),
-    status: payload?.status || "aberta",
-    ...withOwner(ownerId),
-  };
-  const { data, error } = await supabase
-    .from("os")
-    .insert(body)
-    .select()
-    .single();
-  handleError("criar OS", error);
-  return data;
+  return createOs(ownerId, payload);
 }
 
-export async function updateOrdem(id, patch, ownerId) {
-  const { data, error } = await supabase
-    .from("os")
-    .update({ ...patch, updated_at: safeDate() })
-    .eq("id", id)
-    .match(withOwner(ownerId))
-    .select()
-    .single();
-  handleError("atualizar OS", error);
-  return data;
+export async function updateOrdem(id, ownerId, patch) {
+  return updateOs(id, ownerId, patch);
 }
 
 export async function loadConfiguracao(ownerId) {
-  const { data, error } = await supabase
-    .from("configuracoes")
-    .select("*")
-    .match(withOwner(ownerId))
-    .limit(1)
-    .single();
-  handleError("carregar configuracoes", error);
-  return data;
+  return getConfig();
 }
 
 export async function saveConfiguracao(cfg, ownerId) {
-  const body = { ...cfg, ...withOwner(ownerId) };
-  if (cfg.id) {
-    const { error } = await supabase
-      .from("configuracoes")
-      .update(body)
-      .eq("id", cfg.id)
-      .match(withOwner(ownerId));
-    handleError("salvar configuracoes", error);
-  } else {
-    const { error } = await supabase.from("configuracoes").insert(body);
-    handleError("salvar configuracoes", error);
-  }
+  return saveConfig({ ...cfg, proprietario_id: ownerId });
 }
 
 export async function loadHistoricoVendas(ownerId, periodo = {}) {
-  const { inicio, fim } = periodo;
-  let query = supabase
-    .from("vendas")
-    .select("*")
-    .match(withOwner(ownerId))
-    .order("criado_em", { ascending: false });
-  if (inicio) query = query.gte("criado_em", inicio);
-  if (fim) query = query.lte("criado_em", fim);
-  const { data, error } = await query;
-  handleError("historico de vendas", error);
-  return data || [];
+  return listarVendas(ownerId, {
+    dataInicial: periodo.inicio,
+    dataFinal: periodo.fim,
+  });
+}
+
+// Compat helpers para estoque
+export async function createProdutoEstoque(payload, ownerId) {
+  return createProdutoEstoqueService(ownerId, payload);
+}
+
+export async function updateProdutoEstoque(id, ownerId, payload) {
+  return updateProdutoEstoqueService(id, ownerId, payload);
+}
+
+export async function inativarProdutoEstoque(id, ownerId) {
+  return inativarProduto(id, ownerId);
+}
+
+// Resumo de OS reutiliza função nova
+export async function loadResumoOs(ownerId, filtros) {
+  return getResumoOs(ownerId, filtros);
 }

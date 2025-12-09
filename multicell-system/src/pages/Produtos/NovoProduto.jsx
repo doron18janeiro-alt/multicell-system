@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "../../services/supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 import "./produto.css";
 
 export default function NovoProduto({ onClose, onCreated }) {

@@ -8,8 +8,10 @@ import {
   getDespesas,
   novaDespesa,
   deletarDespesa,
+  registrarPagamentoDespesa,
 } from "@/hooks/useDespesas.js";
 import NovaDespesa from "@/components/NovaDespesa.jsx";
+import PagamentosModal from "@/pages/Despesas/PagamentosModal.jsx";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -32,6 +34,7 @@ export default function Despesas() {
   const [erro, setErro] = useState("");
   const [modalAberto, setModalAberto] = useState(false);
   const [excluindoId, setExcluindoId] = useState(null);
+  const [pagandoDespesa, setPagandoDespesa] = useState(null);
 
   useEffect(() => {
     if (!proprietarioId) return;
@@ -76,6 +79,27 @@ export default function Despesas() {
       setErro(error?.message || "Não foi possível excluir a despesa.");
     } finally {
       setExcluindoId(null);
+    }
+  }
+
+  function getStatus(despesa) {
+    const valor = Number(despesa.valor) || 0;
+    const pago = Number(despesa.total_pago) || 0;
+    if (pago >= valor && valor > 0) return "Pago";
+    if (pago > 0) return "Parcial";
+    return "Em aberto";
+  }
+
+  async function handleRegistrarPagamento(pagamento) {
+    if (!pagandoDespesa) return;
+    setErro("");
+    try {
+      await registrarPagamentoDespesa(pagandoDespesa.id, pagamento);
+      await carregarDespesas();
+      setPagandoDespesa(null);
+    } catch (error) {
+      console.error("[Despesas] registrar pagamento", error);
+      setErro(error?.message || "Não foi possível registrar o pagamento.");
     }
   }
 
@@ -126,6 +150,8 @@ export default function Despesas() {
                 <th>Categoria</th>
                 <th>Descrição</th>
                 <th>Valor</th>
+                <th>Status</th>
+                <th>Restante</th>
                 <th>Data</th>
                 <th className="text-right">Ações</th>
               </tr>
@@ -142,9 +168,37 @@ export default function Despesas() {
                   <td className="text-[#ffe8a3] font-semibold">
                     {currency.format(Number(d.valor) || 0)}
                   </td>
+                  <td>
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold border ${
+                        getStatus(d) === "Pago"
+                          ? "border-emerald-400/50 text-emerald-200 bg-emerald-500/15"
+                          : getStatus(d) === "Parcial"
+                          ? "border-amber-400/50 text-amber-200 bg-amber-500/15"
+                          : "border-slate-400/40 text-slate-200 bg-slate-500/10"
+                      }`}
+                    >
+                      {getStatus(d)}
+                    </span>
+                  </td>
+                  <td className="text-white/80">
+                    {currency.format(
+                      Math.max(
+                        0,
+                        (Number(d.valor) || 0) - (Number(d.total_pago) || 0)
+                      )
+                    )}
+                  </td>
                   <td className="text-white/70">{formatDate(d.created_at)}</td>
                   <td>
                     <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => setPagandoDespesa(d)}
+                        className="rounded-2xl border border-blue-400/40 bg-white/5 px-3 py-1 text-xs text-blue-100 hover:border-blue-300/80 disabled:opacity-60"
+                        disabled={getStatus(d) === "Pago"}
+                      >
+                        Registrar pagamento
+                      </button>
                       <button
                         onClick={() => handleExcluir(d.id)}
                         title="Excluir"
@@ -182,6 +236,15 @@ export default function Despesas() {
         <NovaDespesa
           onSave={handleSalvar}
           onClose={() => setModalAberto(false)}
+        />
+      )}
+
+      {pagandoDespesa && (
+        <PagamentosModal
+          despesa={pagandoDespesa}
+          open={!!pagandoDespesa}
+          onClose={() => setPagandoDespesa(null)}
+          onConfirm={handleRegistrarPagamento}
         />
       )}
     </div>

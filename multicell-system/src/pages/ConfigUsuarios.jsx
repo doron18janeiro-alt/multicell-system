@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 
 export default function ConfigUsuarios() {
   const [users, setUsers] = useState([]);
@@ -18,7 +18,10 @@ export default function ConfigUsuarios() {
 
   const carregar = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("usuarios").select("*").order("nome", { ascending: true });
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("*")
+      .order("nome", { ascending: true });
     if (error) setMensagem("Erro ao carregar usuarios");
     setUsers(data || []);
     setLoading(false);
@@ -59,7 +62,9 @@ export default function ConfigUsuarios() {
   return (
     <div className="page">
       <h1 className="page-title">Usuários e Permissões</h1>
-      <p className="page-subtitle">Controle de perfis ADMIN, GERENTE e CAIXA.</p>
+      <p className="page-subtitle">
+        Controle de perfis ADMIN, GERENTE e CAIXA.
+      </p>
       {mensagem && <div className="panel">{mensagem}</div>}
 
       <div className="panel">
@@ -69,15 +74,24 @@ export default function ConfigUsuarios() {
         <form className="form-grid-estoque" onSubmit={salvar}>
           <div className="form-field">
             <label>Nome</label>
-            <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+            <input
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            />
           </div>
           <div className="form-field">
             <label>Email</label>
-            <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <input
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
           </div>
           <div className="form-field">
             <label>Papel</label>
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+            >
               <option value="ADMIN">ADMIN</option>
               <option value="GERENTE">GERENTE</option>
               <option value="CAIXA">CAIXA</option>
@@ -85,13 +99,20 @@ export default function ConfigUsuarios() {
           </div>
           <div className="form-field">
             <label>Status</label>
-            <select value={form.ativo ? "1" : "0"} onChange={(e) => setForm({ ...form, ativo: e.target.value === "1" })}>
+            <select
+              value={form.ativo ? "1" : "0"}
+              onChange={(e) =>
+                setForm({ ...form, ativo: e.target.value === "1" })
+              }
+            >
               <option value="1">Ativo</option>
               <option value="0">Inativo</option>
             </select>
           </div>
           <div className="form-actions-right">
-            <button type="submit" className="btn btn-primary">Salvar</button>
+            <button type="submit" className="btn btn-primary">
+              Salvar
+            </button>
           </div>
         </form>
       </div>
@@ -113,12 +134,18 @@ export default function ConfigUsuarios() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <select value={u.role} onChange={(e) => mudarRole(u, e.target.value)}>
+                  <select
+                    value={u.role}
+                    onChange={(e) => mudarRole(u, e.target.value)}
+                  >
                     <option value="ADMIN">ADMIN</option>
                     <option value="GERENTE">GERENTE</option>
                     <option value="CAIXA">CAIXA</option>
                   </select>
-                  <button className="btn btn-ghost btn-sm" onClick={() => toggleAtivo(u)}>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => toggleAtivo(u)}
+                  >
                     {u.ativo !== false ? "Desativar" : "Ativar"}
                   </button>
                 </div>

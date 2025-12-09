@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import supabase from "../services/supabase";
+import {
+  listarProdutos,
+  createProduto,
+  updateProduto,
+} from "@/services/produtos";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 const FORM_INICIAL = {
@@ -72,27 +76,22 @@ export default function TelaProdutos() {
     setCarregandoLista(true);
     setMensagem({ tipo: "", texto: "" });
 
-    let query = supabase
-      .from("produtos")
-      .select(
-        "id, nome, codigo, categoria, descricao, preco_custo, preco_venda, quantidade, quantidade_estoque, estoque_minimo, ativo, proprietario_id, criado_em, atualizado_em"
-      )
-      .order("nome", { ascending: true })
-      .eq("proprietario_id", donoAtual);
-
-    const { data, error } = await query;
+    const { data, error } = await listarProdutos(donoAtual, {
+      busca: filtroBusca,
+    });
 
     if (error) {
-      console.error("[TelaProdutos] Falha ao carregar produtos", error);
-      setMensagem({
-        tipo: "erro",
-        texto: "Não foi possível carregar os produtos.",
-      });
+      const mensagem =
+        error?.message || error || "Não foi possível carregar os produtos.";
+      console.error("[TelaProdutos] Falha ao carregar produtos", mensagem);
+      setMensagem({ tipo: "erro", texto: mensagem });
+      alert(mensagem);
       setProdutos([]);
-    } else {
-      setProdutos(data || []);
+      setCarregandoLista(false);
+      return;
     }
 
+    setProdutos(data || []);
     setCarregandoLista(false);
   }
 
@@ -179,54 +178,54 @@ export default function TelaProdutos() {
       proprietario_id: donoAtual,
     };
 
-    try {
-      if (modo === "editar" && produtoEmEdicao?.id) {
-        const { error } = await supabase
-          .from("produtos")
-          .update(payload)
-          .eq("id", produtoEmEdicao.id);
-
-        if (error) throw error;
-        setMensagem({
-          tipo: "sucesso",
-          texto: "Produto atualizado com sucesso.",
-        });
-      } else {
-        const novoPayload = {
-          ...payload,
-          criado_em: new Date().toISOString(),
-        };
-        const { error } = await supabase.from("produtos").insert(novoPayload);
-        if (error) throw error;
-        setMensagem({ tipo: "sucesso", texto: "Produto criado com sucesso." });
+    if (modo === "editar" && produtoEmEdicao?.id) {
+      const { error } = await updateProduto(
+        produtoEmEdicao.id,
+        donoAtual,
+        payload
+      );
+      if (error) {
+        const mensagem = error?.message || error || "Falha ao salvar produto.";
+        console.error("[TelaProdutos] Erro ao salvar produto", mensagem);
+        setMensagem({ tipo: "erro", texto: mensagem });
+        alert(mensagem);
+        setSalvando(false);
+        return;
       }
-
-      await carregarProdutos();
-      fecharPainel();
-    } catch (error) {
-      console.error("[TelaProdutos] Erro ao salvar produto", error);
       setMensagem({
-        tipo: "erro",
-        texto: error.message || "Falha ao salvar produto.",
+        tipo: "sucesso",
+        texto: "Produto atualizado com sucesso.",
       });
-    } finally {
-      setSalvando(false);
+    } else {
+      const { error } = await createProduto(donoAtual, payload);
+      if (error) {
+        const mensagem = error?.message || error || "Falha ao salvar produto.";
+        console.error("[TelaProdutos] Erro ao salvar produto", mensagem);
+        setMensagem({ tipo: "erro", texto: mensagem });
+        alert(mensagem);
+        setSalvando(false);
+        return;
+      }
+      setMensagem({ tipo: "sucesso", texto: "Produto criado com sucesso." });
     }
+
+    await carregarProdutos();
+    fecharPainel();
+    setSalvando(false);
   }
 
   async function alternarAtivo(produto) {
     const novoStatus = !produto.ativo;
-    const { error } = await supabase
-      .from("produtos")
-      .update({ ativo: novoStatus, atualizado_em: new Date().toISOString() })
-      .eq("id", produto.id);
+    const { error } = await updateProduto(produto.id, donoAtual, {
+      ativo: novoStatus,
+    });
 
     if (error) {
-      console.error("[TelaProdutos] Não foi possível alterar status", error);
-      setMensagem({
-        tipo: "erro",
-        texto: "Falha ao alterar status do produto.",
-      });
+      const mensagem =
+        error?.message || error || "Falha ao alterar status do produto.";
+      console.error("[TelaProdutos] Não foi possível alterar status", mensagem);
+      setMensagem({ tipo: "erro", texto: mensagem });
+      alert(mensagem);
       return;
     }
 

@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, ShoppingBag } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import useProdutos from "../hooks/useProdutos.jsx";
-import ProdutosModal from "../components/ProdutosModal.jsx";
-import { removerProduto } from "../services/produtosService.js";
+import { useAuth } from "@/contexts/AuthContext.jsx";
+import useProdutos from "@/hooks/useProdutos.jsx";
+import ProdutosModal from "@/components/ProdutosModal.jsx";
+import { removerProduto } from "@/services/produtos";
 import { money } from "../utils/money";
 import PrimeCard from "../components/ui/PrimeCard.jsx";
 import PrimeButton from "../components/ui/PrimeButton.jsx";
@@ -70,6 +70,15 @@ export default function Produtos() {
       await criar(dados);
     }
   }
+
+  useEffect(() => {
+    if (erro) {
+      alert(erro);
+    }
+    if (feedback) {
+      alert(feedback);
+    }
+  }, [erro, feedback]);
 
   if (authLoading) {
     return (

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo } from "react";
-import "./despesas.css";
 
 const formas = ["pix", "boleto", "credito", "debito"];
 
@@ -34,26 +33,31 @@ export default function PagamentosModal({ despesa, open, onClose, onConfirm }) {
   function handleSubmit(event) {
     event.preventDefault();
     const pagamento = {
-      id: crypto.randomUUID(),
-      valor: Number(form.valor),
-      data: form.data,
-      forma: form.forma,
+      valor_pago: Number(form.valor),
+      data_pagamento: form.data,
+      forma_pagamento: form.forma,
       observacao: form.observacao,
     };
     onConfirm(pagamento);
   }
 
   return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">Registrar pagamento</h2>
-        <p className="modal-subtitle">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-[14px] bg-white text-slate-900 shadow-xl border border-slate-200 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-semibold mb-1">Registrar pagamento</h2>
+        <p className="text-sm text-slate-600 mb-4">
           Restante: <strong>R$ {restante.toFixed(2)}</strong>
         </p>
 
-        <form className="form-grid" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Valor</label>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Valor</label>
             <input
               type="number"
               name="valor"
@@ -63,22 +67,29 @@ export default function PagamentosModal({ despesa, open, onClose, onConfirm }) {
               value={form.valor}
               onChange={handleChange}
               required
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
-          <div className="form-group">
-            <label>Data</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Data</label>
             <input
               type="date"
               name="data"
               value={form.data}
               onChange={handleChange}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
-          <div className="form-group">
-            <label>Forma</label>
-            <select name="forma" value={form.forma} onChange={handleChange}>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Forma</label>
+            <select
+              name="forma"
+              value={form.forma}
+              onChange={handleChange}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
+            >
               {formas.map((forma) => (
                 <option key={forma} value={forma}>
                   {forma.toUpperCase()}
@@ -87,21 +98,30 @@ export default function PagamentosModal({ despesa, open, onClose, onConfirm }) {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Observação</label>
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">Observação</label>
             <textarea
               name="observacao"
               value={form.observacao}
               onChange={handleChange}
               rows="3"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-slate-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
-          <div className="form-actions">
-            <button type="button" className="btn-outline" onClick={onClose}>
+          <div className="pt-2 flex justify-end gap-3">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold"
+              onClick={onClose}
+            >
               Cancelar
             </button>
-            <button type="submit" className="btn-gold" disabled={!form.valor}>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500 disabled:opacity-60"
+              disabled={!form.valor}
+            >
               Confirmar pagamento
             </button>
           </div>

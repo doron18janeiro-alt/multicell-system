@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 import FileUploader from "../components/files/FileUploader";
 import FileGallery from "../components/files/FileGallery";
-import { supabase } from "../services/supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
 import "../styles/garantia.css";

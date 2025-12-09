@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
+import Logo from "@/assets/logo.png";
 
 export default function LogoAnimada({ size = 120 }) {
   return (
     <div style={{ display: "flex", justifyContent: "center" }}>
       <motion.div
-        initial={{ rotate: -8, opacity: 0 }}
+        initial={{ rotate: -6, opacity: 0 }}
         animate={{ rotate: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 120, damping: 12 }}
         style={{
@@ -16,6 +17,7 @@ export default function LogoAnimada({ size = 120 }) {
           position: "relative",
           boxShadow:
             "0 0 42px rgba(168,85,247,0.55), inset 0 0 28px rgba(139,92,246,0.35)",
+          overflow: "hidden",
         }}
       >
         <motion.div
@@ -26,37 +28,35 @@ export default function LogoAnimada({ size = 120 }) {
             position: "absolute",
             inset: 12,
             borderRadius: 18,
-            background: "linear-gradient(135deg, rgba(139,92,246,0.8), rgba(192,132,252,0.5))",
+            background:
+              "linear-gradient(135deg, rgba(139,92,246,0.8), rgba(192,132,252,0.5))",
             filter: "blur(18px)",
             opacity: 0.85,
           }}
         />
         <motion.div
-          animate={{ y: [-6, 6, -6] }}
+          animate={{ y: [-4, 4, -4], scale: [1, 1.02, 1] }}
           transition={{ repeat: Infinity, duration: 3.4, ease: "easeInOut" }}
           style={{
             position: "absolute",
             inset: 16,
             borderRadius: 16,
-            background: "radial-gradient(circle at 50% 50%, rgba(10,8,24,0.9), rgba(7,6,16,0.95))",
+            background:
+              "radial-gradient(circle at 50% 50%, rgba(10,8,24,0.9), rgba(7,6,16,0.95))",
             border: "1px solid rgba(192,132,252,0.65)",
             display: "grid",
             placeItems: "center",
             overflow: "hidden",
           }}
         >
-          <video
-            src="/mascot.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
+          <img
+            src={Logo}
+            alt="Logo Multicell"
             style={{
-              width: "100%",
-              height: "100%",
+              width: "80%",
+              height: "80%",
               objectFit: "contain",
-              background: "black",
-              filter: "drop-shadow(0 0 12px rgba(168,85,247,0.6))",
+              filter: "drop-shadow(0 0 12px rgba(168,85,247,0.55))",
             }}
           />
         </motion.div>

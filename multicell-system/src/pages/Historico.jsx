@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../services/supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 import "../styles/historico.css";
 
 function formatCurrency(value) {

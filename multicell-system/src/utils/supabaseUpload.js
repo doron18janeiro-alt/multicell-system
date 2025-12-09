@@ -1,4 +1,4 @@
-import { supabase } from "../services/supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 
 // folder = clientes, produtos, garantias, despesas, os
 export async function uploadFoto(folder, file) {

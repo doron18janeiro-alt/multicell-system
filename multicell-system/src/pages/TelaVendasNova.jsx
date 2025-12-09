@@ -3,8 +3,8 @@ import { Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext.jsx";
 import useClientes from "@/hooks/useClientes";
 import useProdutos from "@/hooks/useProdutos";
-import { registrarVenda } from "@/services/vendasService";
-import { atualizarProduto } from "@/services/produtosService";
+import { registrarVenda } from "@/services/financeiro";
+import { updateProduto } from "@/services/produtos";
 import PrimeCard from "@/components/ui/PrimeCard";
 import PrimeButton from "@/components/ui/PrimeButton";
 import PrimeInput from "@/components/ui/PrimeInput";
@@ -61,6 +61,7 @@ export default function TelaVendasNova() {
   useEffect(() => {
     if (erroClientes || erroProdutos) {
       setMensagem({ tipo: "erro", texto: erroClientes || erroProdutos });
+      alert(erroClientes || erroProdutos);
     }
   }, [erroClientes, erroProdutos]);
 
@@ -183,41 +184,56 @@ export default function TelaVendasNova() {
       subtotal: item.subtotal,
     }));
 
-    try {
-      const { error } = await registrarVenda(
-        donoAtual,
-        vendaPayload,
-        itensPayload
-      );
-      if (error) throw error;
+    const { error: vendaError } = await registrarVenda(
+      donoAtual,
+      vendaPayload,
+      itensPayload
+    );
 
-      await Promise.all(
-        itens.map((item) => {
-          const produtoAtual = produtos.find((p) => p.id === item.produto_id);
-          if (!produtoAtual) return null;
-          const estoqueAtual = Number(
-            produtoAtual.quantidade_estoque ?? produtoAtual.quantidade ?? 0
-          );
-          const novoEstoque = Math.max(0, estoqueAtual - item.quantidade);
-          return atualizarProduto(item.produto_id, donoAtual, {
-            quantidade: novoEstoque,
-            quantidade_estoque: novoEstoque,
-          });
-        })
-      );
-
-      setMensagem({ tipo: "sucesso", texto: "Venda registrada com sucesso." });
-      resetFormulario();
-      await carregarProdutos();
-    } catch (error) {
-      console.error("[TelaVendasNova] finalizarVenda", error);
-      setMensagem({
-        tipo: "erro",
-        texto: error.message || "Não foi possível registrar a venda.",
-      });
-    } finally {
+    if (vendaError) {
+      const mensagem =
+        vendaError?.message ||
+        vendaError ||
+        "Não foi possível registrar a venda.";
+      console.error("[TelaVendasNova] finalizarVenda", mensagem);
+      setMensagem({ tipo: "erro", texto: mensagem });
+      alert(mensagem);
       setSalvando(false);
+      return;
     }
+
+    for (const item of itens) {
+      const produtoAtual = produtos.find((p) => p.id === item.produto_id);
+      if (!produtoAtual) continue;
+      const estoqueAtual = Number(
+        produtoAtual.quantidade_estoque ?? produtoAtual.quantidade ?? 0
+      );
+      const novoEstoque = Math.max(0, estoqueAtual - item.quantidade);
+      const { error: estoqueError } = await updateProduto(
+        item.produto_id,
+        donoAtual,
+        {
+          quantidade: novoEstoque,
+          quantidade_estoque: novoEstoque,
+        }
+      );
+      if (estoqueError) {
+        const mensagem =
+          estoqueError?.message ||
+          estoqueError ||
+          "Falha ao atualizar estoque.";
+        console.error("[TelaVendasNova] atualizar estoque", mensagem);
+        setMensagem({ tipo: "erro", texto: mensagem });
+        alert(mensagem);
+        setSalvando(false);
+        return;
+      }
+    }
+
+    setMensagem({ tipo: "sucesso", texto: "Venda registrada com sucesso." });
+    resetFormulario();
+    await carregarProdutos();
+    setSalvando(false);
   };
 
   if (loading) {

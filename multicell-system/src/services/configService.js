@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "@/services/supabaseClient";
 
 const CONFIG_ID = "system-config";
 
@@ -15,6 +15,13 @@ const normalizeTheme = (value) => {
   return allowed.has(normalized) ? normalized : "multicell";
 };
 
+const handleError = (label, error) => {
+  if (!error) return null;
+  const message = error.message || `Erro em ${label}`;
+  console.error("ConfigService:erro", message);
+  return message;
+};
+
 export async function getConfig() {
   const { data, error } = await supabase
     .from("configuracoes")
@@ -23,8 +30,8 @@ export async function getConfig() {
     .maybeSingle();
 
   if (error && error.code !== "PGRST116") {
-    console.error("[ConfigService] Erro ao carregar configurações", error);
-    return { data: null, error };
+    const message = handleError("getConfig", error);
+    return { data: null, error: message };
   }
 
   return { data: data || null, error: null };
@@ -44,7 +51,7 @@ export async function saveConfig(payload = {}) {
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const result = await supabase
     .from("configuracoes")
     .upsert(
       { ...body, created_at: payload.created_at || new Date().toISOString() },
@@ -53,10 +60,10 @@ export async function saveConfig(payload = {}) {
     .select()
     .single();
 
-  if (error) {
-    console.error("[ConfigService] Erro ao salvar configurações", error);
-    return { data: null, error };
+  const message = handleError("saveConfig", result.error);
+  if (message) {
+    return { data: null, error: message };
   }
 
-  return { data, error: null };
+  return { data: result.data ?? null, error: null };
 }

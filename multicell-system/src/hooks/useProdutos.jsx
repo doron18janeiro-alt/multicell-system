@@ -3,40 +3,47 @@ import {
   listarProdutos,
   criarProduto,
   atualizarProduto,
-} from "../services/produtosService";
+} from "@/services/produtos";
 
 export default function useProdutos(proprietarioId) {
-  const [produtos, setProdutos] = useState([]);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState("");
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const carregarProdutos = useCallback(async () => {
     if (!proprietarioId) {
-      setProdutos([]);
+      setData([]);
+      setLoading(false);
+      setError("Sessão expirada. Faça login novamente.");
       return;
     }
-    setCarregando(true);
-    setErro("");
+    setLoading(true);
+    setError(null);
 
-    try {
-      const { data, error } = await listarProdutos(proprietarioId);
-      if (error) throw error;
-      setProdutos(data || []);
-    } catch (error) {
-      console.error("[useProdutos] listar", error);
-      setErro("Não foi possível carregar os produtos.");
-    } finally {
-      setCarregando(false);
+    const { data, error } = await listarProdutos(proprietarioId);
+    if (error) {
+      console.error("useProdutos:erro", error);
+      setError(error?.message || error);
+      setData([]);
+      setLoading(false);
+      return;
     }
+    setData(data || []);
+    setLoading(false);
   }, [proprietarioId]);
 
   const criar = useCallback(
     async (dados) => {
       if (!proprietarioId) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
       const { error } = await criarProduto(proprietarioId, dados);
-      if (error) throw error;
+      if (error) {
+        console.error("useProdutos:erro", error);
+        setError(error?.message || error);
+        return;
+      }
       await carregarProdutos();
     },
     [carregarProdutos, proprietarioId]
@@ -45,10 +52,15 @@ export default function useProdutos(proprietarioId) {
   const atualizar = useCallback(
     async (id, dados) => {
       if (!proprietarioId) {
-        throw new Error("Sessão expirada. Faça login novamente.");
+        setError("Sessão expirada. Faça login novamente.");
+        return;
       }
       const { error } = await atualizarProduto(id, proprietarioId, dados);
-      if (error) throw error;
+      if (error) {
+        console.error("useProdutos:erro", error);
+        setError(error?.message || error);
+        return;
+      }
       await carregarProdutos();
     },
     [carregarProdutos, proprietarioId]
@@ -59,9 +71,12 @@ export default function useProdutos(proprietarioId) {
   }, [carregarProdutos]);
 
   return {
-    produtos,
-    carregando,
-    erro,
+    produtos: data,
+    carregando: loading,
+    erro: error,
+    data,
+    loading,
+    error,
     carregarProdutos,
     criar,
     atualizar,
