@@ -1,5 +1,6 @@
--- Multicell System - schema simplificado (idempotente)
--- Compatível com Supabase. Usa IF NOT EXISTS, RLS e isolamento por usuário (auth.uid() = user_id).
+-- Multicell System - schema completo e idempotente
+-- Compatível com Supabase + PostgreSQL. Inclui extensões, funções, tabelas, índices,
+-- triggers, RLS e políticas (auth.uid() = user_id).
 
 set check_function_bodies = off;
 
@@ -61,25 +62,27 @@ $$;
 -- Tabelas
 create table if not exists public.proprietarios (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
-  email text unique not null,
-  nome text,
-  created_at timestamptz default now()
+  nome text not null,
+  email text not null,
+  telefone text,
+  created_at timestamptz default now(),
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists proprietarios_created_at_idx on public.proprietarios (created_at desc);
 create index if not exists proprietarios_email_idx on public.proprietarios (lower(email));
 create index if not exists proprietarios_user_idx on public.proprietarios (user_id);
+create index if not exists proprietarios_nome_idx on public.proprietarios (lower(nome));
 
 create table if not exists public.clientes (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
   nome text not null,
   telefone text,
   cpf text,
   email text,
   observacoes text,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now(),
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists clientes_created_at_idx on public.clientes (created_at desc);
@@ -88,11 +91,11 @@ create index if not exists clientes_user_idx on public.clientes (user_id);
 
 create table if not exists public.produtos (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
   nome text not null,
   preco numeric not null,
   estoque integer default 0,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now(),
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists produtos_created_at_idx on public.produtos (created_at desc);
@@ -101,10 +104,9 @@ create index if not exists produtos_user_idx on public.produtos (user_id);
 
 create table if not exists public.vendas (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
-  cliente_id uuid references public.clientes(id),
   total numeric default 0,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now() not null,
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists vendas_created_at_idx on public.vendas (created_at desc);
@@ -112,13 +114,13 @@ create index if not exists vendas_user_idx on public.vendas (user_id);
 
 create table if not exists public.vendas_itens (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
-  venda_id uuid references public.vendas(id),
+  venda_id uuid references public.vendas(id) on delete cascade,
   produto_id uuid references public.produtos(id),
   quantidade integer not null,
   preco_unit numeric not null,
-  subtotal numeric not null,
-  created_at timestamptz default now() not null
+  subtotal numeric not null default 0,
+  created_at timestamptz default now() not null,
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists vendas_itens_created_at_idx on public.vendas_itens (created_at desc);
@@ -126,13 +128,13 @@ create index if not exists vendas_itens_user_idx on public.vendas_itens (user_id
 
 create table if not exists public.os (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
   cliente_id uuid references public.clientes(id),
   aparelho text not null,
   defeito text,
-  valor numeric default 0,
+  valor numeric,
   status text default 'aberto',
-  created_at timestamptz default now() not null
+  created_at timestamptz default now(),
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists os_created_at_idx on public.os (created_at desc);
@@ -141,11 +143,11 @@ create index if not exists os_user_idx on public.os (user_id);
 
 create table if not exists public.garantias (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
   os_id uuid references public.os(id),
   descricao text,
   validade timestamptz,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now(),
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists garantias_created_at_idx on public.garantias (created_at desc);
@@ -154,11 +156,11 @@ create index if not exists garantias_user_idx on public.garantias (user_id);
 
 create table if not exists public.despesas (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null default auth.uid(),
   categoria text not null,
   descricao text,
   valor numeric not null,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now(),
+  user_id uuid not null default auth.uid()
 );
 
 create index if not exists despesas_created_at_idx on public.despesas (created_at desc);
