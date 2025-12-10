@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getConfig, saveConfig } from "../services/configService";
+import { getConfig, saveConfig } from "@/services/configService";
 
 const themes = [
   { value: "multicell", label: "Multicell" },

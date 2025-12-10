@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Login from "../pages/Login";
+import Login from "@/pages/Login";
 
 const loginMock = vi.fn();
 const navigateMock = vi.fn();

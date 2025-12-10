@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/services/supabaseClient";
-import FileUploader from "../../components/files/FileUploader";
-import FileGallery from "../../components/files/FileGallery";
+import FileUploader from "@/components/files/FileUploader";
+import FileGallery from "@/components/files/FileGallery";
 import "./produto.css";
 
 export default function DetalhesProduto() {

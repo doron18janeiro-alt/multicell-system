@@ -6,10 +6,10 @@ implementação oficial agora reside em src/pages/Clientes.jsx.
 
 import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
-import ClientesModal from "../components/ClientesModal";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import useClientes from "../hooks/useClientes";
-import { removerCliente } from "../services/clientesService";
+import ClientesModal from "@/components/ClientesModal";
+import { useAuth } from "@/contexts/AuthContext.jsx";
+import useClientes from "@/hooks/useClientes";
+import { removerCliente } from "@/services/clientesService";
 
 export default function ClientesPage() {
   const { proprietarioId, loading: authLoading } = useAuth();
