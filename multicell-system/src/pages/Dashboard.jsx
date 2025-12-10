@@ -95,7 +95,7 @@ export default function Dashboard() {
     return Math.max(...faturamento.map((item) => item.total || 0), 1);
   }, [faturamento]);
 
-  if (loading) {
+  if (loading || carregando) {
     return <DashboardSkeleton />;
   }
 
@@ -105,10 +105,6 @@ export default function Dashboard() {
         Faça login para visualizar o dashboard.
       </PrimeCard>
     );
-  }
-
-  if (carregando) {
-    return <DashboardSkeleton />;
   }
 
   const metricCards = [
