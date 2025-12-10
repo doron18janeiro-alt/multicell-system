@@ -9,6 +9,8 @@ import PrimeCard from "@/components/ui/PrimeCard.jsx";
 import PrimeButton from "@/components/ui/PrimeButton.jsx";
 import PrimeInput from "@/components/ui/PrimeInput.jsx";
 import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle.jsx";
+import { PageSkeleton } from "@/components/ui/Skeleton";
+import { getUserMessage, logError } from "@/utils/errorHandler";
 
 export default function Produtos() {
   const { proprietarioId, loading: authLoading } = useAuth();
@@ -54,10 +56,9 @@ export default function Produtos() {
       if (error) throw error;
       await carregarProdutos();
     } catch (error) {
-      console.error("[Produtos] excluir", error);
-      setFeedback(
-        error?.message || "Não foi possível excluir o produto. Tente novamente."
-      );
+      const mensagem = getUserMessage(error);
+      logError(error, "Produtos - Excluir");
+      setFeedback(mensagem);
     } finally {
       setExcluindoId(null);
     }
@@ -80,12 +81,8 @@ export default function Produtos() {
     }
   }, [erro, feedback]);
 
-  if (authLoading) {
-    return (
-      <PrimeCard className="text-sm text-white/70">
-        Validando sessão...
-      </PrimeCard>
-    );
+  if (authLoading || carregando) {
+    return <PageSkeleton />;
   }
 
   if (!proprietarioId) {

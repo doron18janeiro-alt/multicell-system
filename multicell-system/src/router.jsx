@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
-const AppLayout = lazy(() => import("@/layout/AppLayout.jsx"));
+const AppLayout = lazy(() => import("@/components/layout/MainLayout.jsx"));
 const Dashboard = lazy(() => import("@/pages/Dashboard.jsx"));
 const Os = lazy(() => import("@/pages/OS.jsx"));
 const DetalhesOS = lazy(() => import("@/pages/OS/DetalhesOS.jsx"));
