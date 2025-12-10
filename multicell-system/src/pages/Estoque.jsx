@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ProdutoForm from "@/components/ProdutoForm";
+import ProdutoForm from "@/components/forms/ProdutoForm";
 import { useAuth } from "@/contexts/AuthContext.jsx";
 import useEstoque from "@/hooks/useEstoque";
 
