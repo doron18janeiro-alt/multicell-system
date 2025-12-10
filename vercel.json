@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "multicell-system/package.json",
-      "use": "@vercel/static-build"
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "multicell-system/dist"
+      }
     }
   ],
   "routes": [
