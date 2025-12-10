@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import useProdutos from "../hooks/useProdutos";
-import ProdutosModal from "../components/ProdutosModal";
+import ProdutosModal from "@/components/ProdutosModal";
 import { removerProduto } from "../services/produtosService";
 import { money } from "../utils/money";
 

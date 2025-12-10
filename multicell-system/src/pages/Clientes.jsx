@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
-import ClientesModal from "../components/ClientesModal";
+import ClientesModal from "@/components/ClientesModal";
 import { removerCliente } from "../services/clientesService";
-import PrimeCard from "../components/ui/PrimeCard";
-import PrimeButton from "../components/ui/PrimeButton";
-import PrimeInput from "../components/ui/PrimeInput";
-import PrimeSectionTitle from "../components/ui/PrimeSectionTitle";
-import { useAuth } from "@/contexts/AuthContext.jsx";
+import PrimeCard from "@/components/ui/PrimeCard";
+import PrimeButton from "@/components/ui/PrimeButton";
+import PrimeInput from "@/components/ui/PrimeInput";
+import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle";
+import { useAuth } from "@/contexts/AuthContext";
 import useClientes from "@/hooks/useClientes";
 
 export default function Clientes() {

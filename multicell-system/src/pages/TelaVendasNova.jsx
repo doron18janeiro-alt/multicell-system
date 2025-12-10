@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, ShoppingCart, Trash2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext.jsx";
+import { useAuth } from "@/contexts/AuthContext";
 import useClientes from "@/hooks/useClientes";
 import useProdutos from "@/hooks/useProdutos";
 import { registrarVenda } from "@/services/financeiro";

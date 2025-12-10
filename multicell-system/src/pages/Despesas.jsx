@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, Wallet } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext.jsx";
-import PrimeCard from "@/components/ui/PrimeCard.jsx";
-import PrimeButton from "@/components/ui/PrimeButton.jsx";
-import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle.jsx";
+import { useAuth } from "@/contexts/AuthContext";
+import PrimeCard from "@/components/ui/PrimeCard";
+import PrimeButton from "@/components/ui/PrimeButton";
+import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle";
 import {
   getDespesas,
   novaDespesa,
   deletarDespesa,
   registrarPagamentoDespesa,
-} from "@/hooks/useDespesas.js";
-import NovaDespesa from "@/components/NovaDespesa.jsx";
-import PagamentosModal from "@/pages/Despesas/PagamentosModal.jsx";
+} from "@/hooks/useDespesas";
+import NovaDespesa from "@/components/NovaDespesa";
+import PagamentosModal from "@/pages/Despesas/PagamentosModal";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",

@@ -11,7 +11,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext.jsx";
+import { useAuth } from "@/contexts/AuthContext";
 import Logo from "@/components/Logo";
 
 const links = [

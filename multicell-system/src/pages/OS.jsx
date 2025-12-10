@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Filter, Plus, Printer, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import TermoGarantia from "../components/TermoGarantia.jsx";
-import FileUploader from "../components/files/FileUploader.jsx";
-import FileGallery from "../components/files/FileGallery.jsx";
+import TermoGarantia from "@/components/TermoGarantia.jsx";
+import FileUploader from "@/components/files/FileUploader.jsx";
+import FileGallery from "@/components/files/FileGallery.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { imprimirHtmlEmNovaJanela } from "../utils/impressao";
 import { compartilharWhatsApp } from "../utils/whatsapp";
 import { deleteOs, listOs } from "@/services/os";
-import PrimeCard from "../components/ui/PrimeCard.jsx";
-import PrimeButton from "../components/ui/PrimeButton.jsx";
-import PrimeInput from "../components/ui/PrimeInput.jsx";
-import PrimeSectionTitle from "../components/ui/PrimeSectionTitle.jsx";
+import PrimeCard from "@/components/ui/PrimeCard.jsx";
+import PrimeButton from "@/components/ui/PrimeButton.jsx";
+import PrimeInput from "@/components/ui/PrimeInput.jsx";
+import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle.jsx";
 
 const statusDictionary = {
   aberta: {

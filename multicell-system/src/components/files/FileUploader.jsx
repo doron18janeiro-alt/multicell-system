@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   uploadFilesForEntity,
   listFilesForEntity,
-} from "../../services/storageFiles";
+} from "@/services/storageFiles";
 import "./files.css";
 
 export default function FileUploader({ entidade, entidadeId, onUploaded }) {

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, Activity, Diamond, ShoppingBag } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext.jsx";
+import { useAuth } from "@/contexts/AuthContext";
 import PrimeCard from "@/components/ui/PrimeCard";
 import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle";
-import { getDespesas } from "@/hooks/useDespesas.js";
+import { getDespesas } from "@/hooks/useDespesas";
 import {
   obterFaturamentoDiario,
   obterResumoMensal,

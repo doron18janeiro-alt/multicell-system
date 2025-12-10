@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   listFilesForEntity,
   deleteFileById,
-} from "../../services/storageFiles";
+} from "@/services/storageFiles";
 import "./files.css";
 
 function formatDate(value) {
