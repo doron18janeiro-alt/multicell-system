@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Users } from "lucide-react";
 import ClientesModal from "@/components/ClientesModal";
-import { removerCliente } from "@/services/clientesService";
+import { removerCliente } from "@/services/clientes";
 import PrimeCard from "@/components/ui/PrimeCard";
 import PrimeButton from "@/components/ui/PrimeButton";
 import PrimeInput from "@/components/ui/PrimeInput";
