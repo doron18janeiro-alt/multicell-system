@@ -2,10 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 
-import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
-import Produtos from "@/pages/Produtos";
-import Os from "@/pages/OS";
+import Login from "@/pages/Login.jsx";
+import Dashboard from "@/pages/Dashboard.jsx";
+import Produtos from "@/pages/Produtos.jsx";
+import Os from "@/pages/OS.jsx";
 
 function LoginRoute() {
   const { signed, loading } = useAuth();

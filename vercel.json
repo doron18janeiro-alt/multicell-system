@@ -1,18 +1,10 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "cd multicell-system && npm install && npm run build",
+  "outputDirectory": "multicell-system/dist",
+  "rewrites": [
     {
-      "src": "multicell-system/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "multicell-system/dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
