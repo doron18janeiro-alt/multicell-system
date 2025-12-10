@@ -12,6 +12,8 @@ import PrimeCard from "@/components/ui/PrimeCard.jsx";
 import PrimeButton from "@/components/ui/PrimeButton.jsx";
 import PrimeInput from "@/components/ui/PrimeInput.jsx";
 import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle.jsx";
+import { PageSkeleton } from "@/components/ui/Skeleton";
+import { getUserMessage, logError } from "@/utils/errorHandler";
 
 const statusDictionary = {
   aberta: {
@@ -207,11 +209,9 @@ export default function OsPage() {
       status,
     });
     if (error) {
-      const mensagem =
-        error?.message || error || "Não foi possível listar as OS.";
-      console.error("OS:erro", mensagem);
+      const mensagem = getUserMessage(error);
+      logError(error, "OS - Listar");
       setFeedback(mensagem);
-      window.alert(mensagem);
       setItems([]);
       setLoadingList(false);
       return;
@@ -225,8 +225,8 @@ export default function OsPage() {
       return;
     const { error } = await deleteOs(os.id, proprietarioId);
     if (error) {
-      const mensagem =
-        error?.message || error || "Não foi possível excluir a OS.";
+      const mensagem = getUserMessage(error);
+      logError(error, "OS - Excluir");
       alert(mensagem);
       return;
     }
@@ -248,11 +248,7 @@ export default function OsPage() {
   }, [items.length, loadingList]);
 
   if (authLoading) {
-    return (
-      <PrimeCard className="text-sm text-white/70">
-        Validando sessão...
-      </PrimeCard>
-    );
+    return <PageSkeleton />;
   }
 
   if (!proprietarioId) {

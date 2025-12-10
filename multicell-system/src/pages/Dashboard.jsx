@@ -3,6 +3,8 @@ import { BarChart3, Activity, Diamond, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext.jsx";
 import PrimeCard from "@/components/ui/PrimeCard";
 import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle";
+import { DashboardSkeleton } from "@/components/ui/Skeleton";
+import { getUserMessage, logError } from "@/utils/errorHandler";
 import { getDespesas } from "@/hooks/useDespesas.js";
 import {
   obterFaturamentoDiario,
@@ -56,11 +58,9 @@ export default function Dashboard() {
       ].filter(Boolean);
 
       if (erros.length) {
-        const mensagem =
-          erros[0] || "Não foi possível carregar o painel. Tente novamente.";
-        console.error("[Dashboard] Falha ao carregar métricas", erros);
+        const mensagem = getUserMessage(erros[0]);
+        logError(erros[0], "Dashboard - Carregar métricas");
         setErro(mensagem);
-        window.alert(mensagem);
       }
 
       setResumoMensal(resumo?.data || null);
@@ -96,19 +96,19 @@ export default function Dashboard() {
   }, [faturamento]);
 
   if (loading) {
-    return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
-        Validando sessão...
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (!proprietarioId) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
+      <PrimeCard className="text-sm text-white/70">
         Faça login para visualizar o dashboard.
-      </div>
+      </PrimeCard>
     );
+  }
+
+  if (carregando) {
+    return <DashboardSkeleton />;
   }
 
   const metricCards = [

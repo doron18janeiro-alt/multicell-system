@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Logo from "@/components/Logo";
+import { getUserMessage, logError } from "@/utils/errorHandler";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -26,7 +27,8 @@ export default function Login() {
     const { error } = await login(email, senha);
 
     if (error) {
-      const mensagem = error?.message || "Credenciais inválidas";
+      const mensagem = getUserMessage(error);
+      logError(error, "Login");
       setErro(mensagem);
       window.alert(mensagem);
     } else {
