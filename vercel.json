@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd multicell-system && npm install && npm run build",
+  "buildCommand": "cd multicell-system && npm ci && npm run build",
   "outputDirectory": "multicell-system/dist",
   "rewrites": [
     {
