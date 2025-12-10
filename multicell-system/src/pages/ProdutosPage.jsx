@@ -5,11 +5,11 @@ Arquivo legado mantido apenas como referência. Utilize src/pages/Produtos.jsx.
 
 import { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import useProdutos from "../hooks/useProdutos";
-import ProdutosModal from "../components/ProdutosModal";
-import { removerProduto } from "../services/produtosService";
-import { money } from "../utils/money";
+import { useAuth } from "@/contexts/AuthContext.jsx";
+import useProdutos from "@/hooks/useProdutos";
+import ProdutosModal from "@/components/ProdutosModal";
+import { removerProduto } from "@/services/produtosService";
+import { money } from "@/utils/money";
 
 export default function ProdutosPage() {
   const { proprietarioId, loading: authLoading } = useAuth();

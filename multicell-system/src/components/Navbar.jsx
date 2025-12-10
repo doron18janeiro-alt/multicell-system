@@ -1,4 +1,4 @@
-import { useAuth } from "../contexts/AuthContext.jsx";
+import { useAuth } from "@/contexts/AuthContext.jsx";
 
 export default function Navbar() {
   const { user } = useAuth();

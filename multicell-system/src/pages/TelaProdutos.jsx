@@ -4,7 +4,7 @@ import {
   createProduto,
   updateProduto,
 } from "@/services/produtos";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import { useAuth } from "@/contexts/AuthContext.jsx";
 
 const FORM_INICIAL = {
   nome: "",

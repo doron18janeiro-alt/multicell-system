@@ -1,5 +1,5 @@
-import { gerarHtmlCupomVenda } from "../utils/cupom";
-import { gerarPix } from "../utils/pix";
+import { gerarHtmlCupomVenda } from "@/utils/cupom";
+import { gerarPix } from "@/utils/pix";
 
 const toDataURLMock = vi.hoisted(() =>
   vi.fn().mockResolvedValue("data:image/png;base64,PIX")

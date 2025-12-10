@@ -1,11 +1,11 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
 
-import Login from "../pages/Login";
-import Dashboard from "../pages/Dashboard";
-import Produtos from "../pages/Produtos";
-import Vendas from "../pages/Vendas";
-import Clientes from "../pages/Clientes";
+import Login from "@/pages/Login";
+import Dashboard from "@/pages/Dashboard";
+import Produtos from "@/pages/Produtos";
+import Vendas from "@/pages/Vendas";
+import Clientes from "@/pages/Clientes";
 
 export default function AppRoutes() {
   return (
