@@ -5,7 +5,7 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Produtos from "@/pages/Produtos";
-import Os from "@/pages/Os";
+import Os from "@/pages/OS";
 
 function LoginRoute() {
   const { signed, loading } = useAuth();
