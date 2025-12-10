@@ -4,11 +4,11 @@ import { useAuth } from "@/contexts/AuthContext.jsx";
 import useProdutos from "@/hooks/useProdutos.jsx";
 import ProdutosModal from "@/components/ProdutosModal.jsx";
 import { removerProduto } from "@/services/produtos";
-import { money } from "../utils/money";
-import PrimeCard from "../components/ui/PrimeCard.jsx";
-import PrimeButton from "../components/ui/PrimeButton.jsx";
-import PrimeInput from "../components/ui/PrimeInput.jsx";
-import PrimeSectionTitle from "../components/ui/PrimeSectionTitle.jsx";
+import { money } from "@/utils/money";
+import PrimeCard from "@/components/ui/PrimeCard.jsx";
+import PrimeButton from "@/components/ui/PrimeButton.jsx";
+import PrimeInput from "@/components/ui/PrimeInput.jsx";
+import PrimeSectionTitle from "@/components/ui/PrimeSectionTitle.jsx";
 
 export default function Produtos() {
   const { proprietarioId, loading: authLoading } = useAuth();
