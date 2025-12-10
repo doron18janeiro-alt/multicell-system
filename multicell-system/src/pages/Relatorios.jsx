@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import useAuth from "../hooks/useAuth";
-import { getResumoOs } from "../services/osService";
-import { obterResumoVendas } from "../services/relatoriosService";
-import { exportCSV } from "../utils/exportCSV";
+import useAuth from "@/hooks/useAuth";
+import { getResumoOs } from "@/services/osService";
+import { obterResumoVendas } from "@/services/relatoriosService";
+import { exportCSV } from "@/utils/exportCSV";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
