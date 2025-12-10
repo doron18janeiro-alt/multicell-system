@@ -5,8 +5,8 @@ import {
   updateOwner,
   deleteOwner,
 } from "../api/ownersService";
-import ProprietarioForm from "../components/ProprietarioForm";
-import Tabela from "../components/Tabela";
+import ProprietarioForm from "@/components/ProprietarioForm";
+import Tabela from "@/components/Tabela";
 
 export default function ProprietariosPage() {
   const [owners, setOwners] = useState([]);
