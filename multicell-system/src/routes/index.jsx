@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Lazy load pages for better performance
 import { lazy, Suspense } from "react";
@@ -24,6 +25,7 @@ const Relatorios = lazy(() => import("@/pages/Relatorios.jsx"));
 const Config = lazy(() => import("@/pages/Config.jsx"));
 const ConfigUsuarios = lazy(() => import("@/pages/ConfigUsuarios.jsx"));
 const TermoGarantia = lazy(() => import("@/pages/TermoGarantia.jsx"));
+const NotFound = lazy(() => import("@/pages/NotFound.jsx"));
 
 // Loading fallback component
 function LoadingFallback() {
@@ -42,6 +44,21 @@ function SuspenseWrapper({ children }) {
   return <Suspense fallback={<LoadingFallback />}>{children}</Suspense>;
 }
 
+// Public route wrapper for login - redirects to dashboard if already signed in
+function PublicRoute({ children }) {
+  const { signed, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingFallback />;
+  }
+
+  if (signed) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
 /**
  * Centralized application routes
  * All routes are defined here for easy maintenance
@@ -53,9 +70,11 @@ export function AppRoutes() {
       <Route
         path="/login"
         element={
-          <SuspenseWrapper>
-            <Login />
-          </SuspenseWrapper>
+          <PublicRoute>
+            <SuspenseWrapper>
+              <Login />
+            </SuspenseWrapper>
+          </PublicRoute>
         }
       />
 
@@ -260,8 +279,15 @@ export function AppRoutes() {
         }
       />
 
-      {/* 404 - Redirect to dashboard */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* 404 - Not Found Page */}
+      <Route
+        path="*"
+        element={
+          <SuspenseWrapper>
+            <NotFound />
+          </SuspenseWrapper>
+        }
+      />
     </Routes>
   );
 }
