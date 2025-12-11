@@ -16,7 +16,7 @@ const OS = lazy(() => import("@/pages/OS.jsx"));
 const DetalhesOS = lazy(() => import("@/pages/OS/DetalhesOS.jsx"));
 const Clientes = lazy(() => import("@/pages/Clientes.jsx"));
 const DetalhesCliente = lazy(() => import("@/pages/Clientes/DetalhesCliente.jsx"));
-const Vendas = lazy(() => import("@/pages/TelaVendasNova.jsx"));
+const Vendas = lazy(() => import("@/pages/Vendas.jsx"));
 const Estoque = lazy(() => import("@/pages/Estoque.jsx"));
 const Despesas = lazy(() => import("@/pages/Despesas.jsx"));
 const DetalhesDespesa = lazy(() => import("@/pages/Despesas/DetalhesDespesa.jsx"));
