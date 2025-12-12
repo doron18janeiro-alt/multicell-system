@@ -3,14 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "check-integrity": "node scripts/check-integrity.js",
-    "prebuild": "npm run check-integrity",
-    "backup:full": "bash backup/backup.sh --full",
-    "backup:incremental": "bash backup/backup.sh --incremental"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd multicell-system && npm ci && npm run build",
-  "outputDirectory": "multicell-system/dist",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/(.*)",
